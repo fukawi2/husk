@@ -1,0 +1,42 @@
+define rules LAN to NET
+accept all	# Allow everything from local network
+end define
+
+define rules LAN to ME
+accept protocol tcp ports ssh,smtp,domain
+accept protocol udp ports ntp,domain
+accept protocol udp ports bootps,bootpc	# Allow clients to DHCP
+end define
+
+define rules ICMP
+accept source address nagios.example.com	# nagios monitoring bypasses icmp checking
+accept protocol icmp type 0 limit 5/sec burst 10
+accept protocol icmp type 3 limit 5/sec burst 10
+accept protocol icmp type 8 limit 5/sec burst 10
+accept protocol icmp type 11 limit 5/sec burst 10
+accept protocol icmp type 30 limit 5/sec burst 10
+drop all protocol icmp
+end define
+
+define rules INPUT
+accept in ME
+ICMP all protocol icmp
+drop protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
+drop protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
+end define
+
+define rules FORWARD
+ICMP all protocol icmp
+drop protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
+drop protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
+# Allow bounce routing
+accept in LAN out LAN
+end define
+
+# Standard stuff
+common loopback
+common nat NET
+common bogon NET
+common xmas NET
+common syn NET
+common spoof LAN 10.0.0.0/24

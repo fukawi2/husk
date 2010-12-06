@@ -1,0 +1,9 @@
+This iptables compiler is aimed to improve the readability of iptables rules
+and allow them to be expessed in a somewhat more 'freeform' fashion compared
+to normal 'raw' iptables rules.
+
+There is still structure (of course) however there is room to play. Keywords
+must be delcared (such as 'protocol' and 'port') to avoid ambiguity in
+compilation, however case is generally not catred about.
+
+I welcome feedback and suggestions for features and improvements :)
