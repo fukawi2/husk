@@ -21,7 +21,6 @@ use strict;
 use Config::Simple;		# To parse husk.conf
 use Config::IniFiles;	# To parse here documents in hostgroups.conf
 use Getopt::Long;
-use Switch;
 
 my $VERSION = '%VERSION%';
 
