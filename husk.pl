@@ -358,6 +358,42 @@ sub new_udc_chain {
 
 sub close_rules {
 	# setup 'common' rules and chains
+	if (scalar(@bogon_protection)) {
+		# Bogon Protection; per interface
+		my $BOGON_CHAIN = 'cmn_BOGON';
+		my $BOGON_TABLE = 'mangle';
+
+		# Create a chain for bogon protection
+		&ipt(sprintf('-t %s -N %s', $BOGON_TABLE, $BOGON_CHAIN));
+
+		# Populate the new chain with rules
+		foreach my $bogon_src (sort(keys %BOGON_SOURCES)) {
+			# LOG and DROP bad sources (bogons)
+			log_and_drop(
+				table=>$BOGON_TABLE,
+				chain=>$BOGON_CHAIN,
+				prefix=>'BOGON',
+				criteria=>sprintf(
+					'-s %s -m comment --comment "%s"',
+					$bogon_src,
+					$BOGON_SOURCES{$bogon_src},
+			));
+		}
+		# End with a default RETURN
+		&ipt(sprintf('-t %s -A %s -j RETURN', $BOGON_TABLE, $BOGON_CHAIN));
+
+		# Jump the new chain for packets in the user-specified interfaces
+		foreach my $int (@bogon_protection) {
+			&ipt(sprintf(
+				'-t %s -I PREROUTING -i %s -j %s -m comment --comment "bogon protection for %s"',
+				$BOGON_TABLE,
+				$interface{$int},
+				$BOGON_CHAIN,
+				$int,
+			));
+		}
+	}
+	
 	if (scalar(keys %spoof_protection)) {
 		# Antispoof rules; Per interface
 		my $SPOOF_CHAIN = 'cmn_SPOOF';
@@ -403,42 +439,6 @@ sub close_rules {
 				$SPOOF_TABLE,
 				$SPOOF_CHAIN,
 			));
-	}
-	
-	if (scalar(@bogon_protection)) {
-		# Bogon Protection; per interface
-		my $BOGON_CHAIN = 'cmn_BOGON';
-		my $BOGON_TABLE = 'mangle';
-
-		# Create a chain for bogon protection
-		&ipt(sprintf('-t %s -N %s', $BOGON_TABLE, $BOGON_CHAIN));
-
-		# Populate the new chain with rules
-		foreach my $bogon_src (sort(keys %BOGON_SOURCES)) {
-			# LOG and DROP bad sources (bogons)
-			log_and_drop(
-				table=>$BOGON_TABLE,
-				chain=>$BOGON_CHAIN,
-				prefix=>'BOGON',
-				criteria=>sprintf(
-					'-s %s -m comment --comment "%s"',
-					$bogon_src,
-					$BOGON_SOURCES{$bogon_src},
-			));
-		}
-		# End with a default RETURN
-		&ipt(sprintf('-t %s -A %s -j RETURN', $BOGON_TABLE, $BOGON_CHAIN));
-
-		# Jump the new chain for packets in the user-specified interfaces
-		foreach my $int (@bogon_protection) {
-			&ipt(sprintf(
-				'-t %s -I PREROUTING -i %s -j %s -m comment --comment "bogon protection for %s"',
-				$BOGON_TABLE,
-				$interface{$int},
-				$BOGON_CHAIN,
-				$int,
-			));
-		}
 	}
 	
 	# xmas Protection
