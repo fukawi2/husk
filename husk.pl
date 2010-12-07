@@ -878,17 +878,17 @@ sub compile_nat {
 			$criteria{'port_int'}	? ":$criteria{'port_int'}"							: '',
 		)));
 	# SNAT with the criteria inversed (ie, dest become source and vice-versa)
-	&ipt(&collapse_spaces(sprintf(
-			'-t nat -A POSTROUTING %s %s %s %s %s %s %s -j SNAT %s',
-			$criteria{'in'}			? "-o $interface{$criteria{'in'}}"					: '',
-			$criteria{'proto'}		? "-p $criteria{'proto'}"							: '',
-			$criteria{'inet_int'}	? "-s $criteria{'inet_int'}"						: '',
-			$criteria{'sport_ext'}	? "--dport $criteria{'sport_ext'}"					: '',
-			$criteria{'dport_ext'}	? "--sport $criteria{'dport_ext'}"					: '',
-			$criteria{'sports_ext'}	? "-m multiport --dports $criteria{'sports_ext'}"	: '',
-			$criteria{'dports_ext'}	? "-m multiport --sports $criteria{'dports_ext'}"	: '',
-			$criteria{'inet_ext'}	? "--to $criteria{'inet_ext'}"						: '',
-		)));
+#	&ipt(&collapse_spaces(sprintf(
+#			'-t nat -A POSTROUTING %s %s %s %s %s %s %s -j SNAT %s',
+#			$criteria{'in'}			? "-o $interface{$criteria{'in'}}"					: '',
+#			$criteria{'proto'}		? "-p $criteria{'proto'}"							: '',
+#			$criteria{'inet_int'}	? "-s $criteria{'inet_int'}"						: '',
+#			$criteria{'sport_ext'}	? "--dport $criteria{'sport_ext'}"					: '',
+#			$criteria{'dport_ext'}	? "--sport $criteria{'dport_ext'}"					: '',
+#			$criteria{'sports_ext'}	? "-m multiport --dports $criteria{'sports_ext'}"	: '',
+#			$criteria{'dports_ext'}	? "-m multiport --sports $criteria{'dports_ext'}"	: '',
+#			$criteria{'inet_ext'}	? "--to $criteria{'inet_ext'}"						: '',
+#		)));
 }
 
 sub compile_interception {
