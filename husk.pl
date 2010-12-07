@@ -67,6 +67,8 @@ my $qr_kw_in_int	= qr/\bin ($qr_int_name)\b/io;
 my $qr_kw_out_int	= qr/\bout ($qr_int_name)\b/io;
 my $qr_kw_src_addr	= qr/\bsource address ($qr_hostname|$qr_ip_cidr)\b/io;
 my $qr_kw_dst_addr	= qr/\bdest(ination)? address ($qr_hostname|$qr_ip_cidr)(:(.+))?\b/io;
+my $qr_kw_src_ip	= qr/\bsource address ($qr_ip_cidr)(:(.+))?\b/io;
+my $qr_kw_dst_ip	= qr/\bdest(ination)? address ($qr_ip_cidr)(:(.+))?\b/io;
 my $qr_kw_src_host	= qr/\bsource group (\S+)\b/io;
 my $qr_kw_dst_host	= qr/\bdest(ination)? group (\S+)\b/io;
 my $qr_kw_src_range	= qr/\bsource range ($qr_ip_address) to ($qr_ip_address)\b/io;
@@ -832,7 +834,7 @@ sub compile_nat {
 		{$criteria{'in'}	= uc($1)}
 	if ($rule =~ s/$qr_kw_protocol//s)
 		{$criteria{'proto'}	= lc($2)}
-	if ($rule =~ s/$qr_kw_dst_addr//s)
+	if ($rule =~ s/$qr_kw_dst_ip//s)
 		{$criteria{'inet_ext'}	= lc($2)}
 	if ($rule =~ s/$qr_kw_port//s) {
 		my $port = lc($3);
