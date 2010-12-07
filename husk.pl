@@ -502,10 +502,6 @@ sub close_rules {
 
 	# Set policies
 	foreach my $chain qw(INPUT FORWARD OUTPUT) {
-		log_and_drop(
-			chain=>$chain,
-			prefix=>'EOR',
-		);
 		&ipt(sprintf('-P %s DROP', $chain));
 	}
 }
