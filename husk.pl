@@ -242,7 +242,7 @@ sub read_rules_file {
 			&bomb(sprintf('Found "%s" but not inside a "define" block?', $line))
 					unless $curr_chain;
 
-			if ($closing_tgt =~ m/DROP/) {
+			if ($closing_tgt and $closing_tgt =~ m/DROP/) {
 				# Cross zone chain with DROP to close with.
 				log_and_drop(chain=>$curr_chain);
 			} elsif ($closing_tgt) {
