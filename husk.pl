@@ -184,6 +184,16 @@ sub read_rules_file {
 				$closing_tgt = 'DROP';
 			}
 		}
+		elsif ($line =~ m/$qr_add_chain/) {
+			# handle blocks adding to INPUT, OUTPUT and/or FORWARD
+			my $chain_name = uc($1);
+
+			# make sure we're not still inside an earlier block
+			&bomb(sprintf('"%s" starts before previous define block has ended', $line))
+					if $curr_chain;
+
+			$curr_chain = $chain_name;
+		}
 		elsif ($line =~ m/$qr_define_sub/) {
 			# Start of a user-defined chain
 			my $udc_name = $1;
@@ -197,16 +207,6 @@ sub read_rules_file {
 				if (grep(m/$udc_name/i, @RESERVED_WORDS));
 
 			$curr_chain = &new_udc_chain(line=>$line, udc_name=>$udc_name);
-		}
-		elsif ($line =~ m/$qr_add_chain/) {
-			# handle blocks adding to INPUT, OUTPUT and/or FORWARD
-			my $chain_name = uc($1);
-
-			# make sure we're not still inside an earlier block
-			&bomb(sprintf('"%s" starts before previous define block has ended', $line))
-					if $curr_chain;
-
-			$curr_chain = $chain_name;
 		}
 		elsif ($line =~ m/$qr_tgt_builtins/) {
 			# call rule - jump to built-in
