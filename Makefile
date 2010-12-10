@@ -17,7 +17,7 @@ docs: ABOUT README rules.conf.simple LICENSE
 	done
 
 config: husk.conf interfaces.conf addr_groups.conf
-	for FILE in husk.conf interfaces.conf hostgroups.conf ; do \
+	for FILE in husk.conf interfaces.conf addr_groups.conf ; do \
 		[[ -e $(DESTDIR)$(D_CNF)/$$FILE ]] || install -D -m 0644 $$FILE $(DESTDIR)$(D_CNF)/$$FILE ; \
 	done
 
