@@ -11,12 +11,12 @@ bin: husk.pl fire.sh
 	install -D -m 0755 $(FOOBAR).pl $(DESTDIR)$(D_BIN)/$(FOOBAR)
 	install -D -m 0755 fire.sh $(DESTDIR)$(D_BIN)/fire
 
-docs: ABOUT README rules.conf.example rules.conf.simple LICENSE
-	for FILE in ABOUT README rules.conf.example rules.conf.simple LICENSE ; do \
+docs: ABOUT README rules.conf.simple LICENSE
+	for FILE in ABOUT README rules.conf.simple LICENSE ; do \
 		install -D -m 0644 $$FILE $(DESTDIR)$(D_DOC)/$$FILE ; \
 	done
 
-config: husk.conf interfaces.conf hostgroups.conf
+config: husk.conf interfaces.conf addr_groups.conf
 	for FILE in husk.conf interfaces.conf hostgroups.conf ; do \
 		[[ -e $(DESTDIR)$(D_CNF)/$$FILE ]] || install -D -m 0644 $$FILE $(DESTDIR)$(D_CNF)/$$FILE ; \
 	done
