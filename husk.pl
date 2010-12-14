@@ -244,7 +244,7 @@ sub read_rules_file {
 			&bomb(sprintf('Found "%s" but not inside a "define" block?', $line))
 					unless $curr_chain;
 
-			&close_chain(chain=>$curr_chain, closing_tgt=>'DROP');
+			&close_chain(chain=>$curr_chain, closing_tgt=>$closing_tgt);
 
 			undef($curr_chain);
 			$closing_tgt = '';
