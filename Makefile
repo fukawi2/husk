@@ -11,8 +11,8 @@ bin: husk.pl fire.sh
 	install -D -m 0755 $(FOOBAR).pl $(DESTDIR)$(D_BIN)/$(FOOBAR)
 	install -D -m 0755 fire.sh $(DESTDIR)$(D_BIN)/fire
 
-docs: ABOUT README rules.conf.simple LICENSE
-	for FILE in ABOUT README rules.conf.simple LICENSE ; do \
+docs: ABOUT README rules.conf.simple rules.conf.standalone LICENSE
+	for FILE in ABOUT README rules.conf.simple rules.conf.standalone LICENSE ; do \
 		install -D -m 0644 $$FILE $(DESTDIR)$(D_DOC)/$$FILE ; \
 	done
 
