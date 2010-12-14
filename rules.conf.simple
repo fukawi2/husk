@@ -9,20 +9,29 @@ accept protocol udp ports bootps,bootpc	# Allow clients to DHCP
 end define
 
 define rules ICMP
-accept source address nagios.example.com	# nagios monitoring bypasses icmp checking
-accept protocol icmp type 0 limit 5/sec burst 10
-accept protocol icmp type 3 limit 5/sec burst 10
-accept protocol icmp type 8 limit 5/sec burst 10
-accept protocol icmp type 11 limit 5/sec burst 10
-accept protocol icmp type 30 limit 5/sec burst 10
+# Disable these 3 rules if your box is low on memory
+iptables -A sbrt_ICMP -m recent --name icmp --set
+iptables -A sbrt_ICMP -m recent --name icmp --rcheck --seconds 4 --hitcount 8 -j LOG --log-prefix='[ICMP LIMIT] '
+iptables -A sbrt_ICMP -m recent --name icmp --rcheck --seconds 4 --hitcount 8 -j DROP
+# Use these ICMP rules everywhere
+accept protocol icmp type 0 limit 10/sec burst 15
+accept protocol icmp type 3 limit 10/sec burst 15
+accept protocol icmp type 8 limit 10/sec burst 15
+accept protocol icmp type 11 limit 10/sec burst 15
+accept protocol icmp type 30 limit 10/sec burst 15
+iptables -A sbrt_ICMP -j LOG --log-prefix='[ICMP GLOBAL LIMIT] '
 drop all protocol icmp
 end define
 
 define rules INPUT
-accept in ME
 ICMP all protocol icmp
 drop protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
 drop protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
+end define
+
+define rules INPUT
+reject state new protocol tcp port 6667:6669	# No IRC from this box
+accept all
 end define
 
 define rules FORWARD
