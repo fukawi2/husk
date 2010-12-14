@@ -1,0 +1,49 @@
+#
+# These rules are an example for a stand-alone system (eg, a desktop or web
+# server) rather than a box that is functioning as a router with multiple
+# network cards.
+#
+
+define rules SSH_ALLOWED
+accept source address home.example.com
+accept source address work.example.com
+reject all
+end define
+
+define rules NET to ME
+accept protocol udp ports ntp,domain
+accept protocol tcp ports smtp,domain
+accept protocol tcp ports http,https
+SSH_ALLOWED protocol tcp port ssh
+end define
+
+define rules ICMP
+# Disable these 3 rules if your box is low on memory
+iptables -A sbrt_ICMP -m recent --name icmp --set
+iptables -A sbrt_ICMP -m recent --name icmp --rcheck --seconds 4 --hitcount 8 -j LOG --log-prefix='[ICMP LIMIT] '
+iptables -A sbrt_ICMP -m recent --name icmp --rcheck --seconds 4 --hitcount 8 -j DROP
+# Use these ICMP rules everywhere
+accept protocol icmp type 0 limit 10/sec burst 15
+accept protocol icmp type 3 limit 10/sec burst 15
+accept protocol icmp type 8 limit 10/sec burst 15
+accept protocol icmp type 11 limit 10/sec burst 15
+accept protocol icmp type 30 limit 10/sec burst 15
+iptables -A sbrt_ICMP -j LOG --log-prefix='[ICMP GLOBAL LIMIT] '
+drop all protocol icmp
+end define
+
+define rules OUTPUT
+accept all
+end define
+
+define rules INPUT
+ICMP all protocol icmp
+drop protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
+drop protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
+end define
+
+# Standard stuff
+common loopback
+common bogon NET
+common xmas NET
+common syn NET
