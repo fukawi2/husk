@@ -938,7 +938,7 @@ sub compile_common {
 
 	# strip out the leading 'common' keyword
 	$line =~ s/$qr_tgt_common//s;
-	$line =~ &cleanup_line($line);
+	$line = &cleanup_line($line);
 
 	if ($line =~ m/^nat ($qr_int_name)/i) {
 		# SNAT traffic out a givein interface
