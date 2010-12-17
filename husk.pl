@@ -491,6 +491,7 @@ sub close_rules {
 			my $new_chain	= sprintf("%s_%s_%s", $xzone_prefix, $int_from, $int_to);
 			next if ($xzone_calls{$new_chain});
 			next if ($int_from =~ m/^ME$/ and $int_to =~ m/^ME$/);
+			next if ($int_from eq $int_to);	# Don't create bounce chains
 
 			# Create new chain
 			my $curr_chain = &new_call_chain(line=>'none', in=>$int_from, out=>$int_to);
