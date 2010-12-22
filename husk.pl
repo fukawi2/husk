@@ -158,6 +158,7 @@ sub read_rules_file {
 
 	open FILE, "<$fname" or &bomb("Failed to read $fname");
 	my @lines = <FILE>;
+	close(FILE);
 	$line_cnt = 0;
 
 	# Find and parse all our subroutine chains first
