@@ -36,6 +36,7 @@ my %addr_group;			# Hostgroups from hostgroups.conf
 my @output_rules;		# Compiled Rules to be output
 my %xzone_calls;		# Hash of cross-zone traffic rulesets (eg, xxx_LAN_NET)
 my %udc_list;			# Names of User-Defined Chains
+my %user_var;			# User Defined Variables
 
 # somewhere to store info for the 'common' rules we have to include in the output
 my %spoof_protection;	# Hash of Arrays to store valid networks per interface (see &compile_standard)
@@ -54,6 +55,7 @@ my $qr_first_word	= qr/^(\w+)/o;
 my $qr_define_xzone	= qr/^define\s+rules\s+($qr_int_name)\s+to\s+($qr_int_name)$/io;
 my $qr_define_sub	= qr/^define\s+rules\s+(\w+)\b?$/io;
 my $qr_add_chain	= qr/^define\s+rules\s+(INPUT|FORWARD|OUTPUT)\b?$/io;
+my $qr_def_variable	= qr/^define\s+var(iable)?\s+(\w+)\b?$/io;
 my $qr_tgt_builtins	= qr/^(accept|drop|reject|log)\b/io;
 my $qr_tgt_redirect	= qr/^(redirect|trap)\b/io;
 my $qr_tgt_map		= qr/^map\b/io;
@@ -88,6 +90,7 @@ my $qr_kw_mac_addr	= qr/\bmac ($qr_mac_address)\b/io;
 my $qr_kw_noop		= qr/\b(all)\b/io;
 my $qr_call_any		= qr/_ANY(_|\b)/o;
 my $qr_call_me		= qr/_ME(_|\b)/o;
+my $qr_variable		= qr/\%(\w+)/io;
 
 # Constants
 my %BOGON_SOURCES;
@@ -147,6 +150,7 @@ sub read_rules_file {
 
 	local(*FILE);
 	my $closing_tgt;	# Where to JUMP when we close the current chain
+	my $in_def_variable;# Boolean if we're "inside" a "define var" block
 
 	# make sure the file exists first
 	&bomb(sprintf('Rules file does not exist: %s', $fname))
@@ -214,6 +218,19 @@ sub read_rules_file {
 				unless $curr_chain;
 			&compile_call(chain=>$curr_chain, line=>$line);
 		}
+		elsif ($line =~ m/$qr_def_variable/) {
+			my $var_name = $2;
+			&bomb("Variable already defined: $var_name")
+				if ($user_var{$var_name});
+			# Loop through all the next lines until we find 'end define'
+			for (my $v = $line_cnt; 1; $v++) {
+				my $val = $lines[$v];
+				chomp($val);
+				last if ($val =~ m/$qr_end_define/);
+				push(@{$user_var{$var_name}}, $val);
+			}
+			$in_def_variable = 1;
+		}
 		elsif ($line =~ m/$qr_tgt_map/) {
 			&compile_nat($line);
 		}
@@ -242,14 +259,19 @@ sub read_rules_file {
 
 			# make sure we are actually in a define rules block
 			&bomb(sprintf('Found "%s" but not inside a "define" block?', $line))
-					unless $curr_chain;
+					unless ($curr_chain or $in_def_variable);
 
-			&close_chain(chain=>$curr_chain, closing_tgt=>$closing_tgt);
+			&close_chain(chain=>$curr_chain, closing_tgt=>$closing_tgt)
+					if ($curr_chain);
 
 			undef($curr_chain);
+			undef($in_def_variable);
 			$closing_tgt = '';
 		}
 		else {
+			# Ignore if we're inside a variable declaration
+			next if ($in_def_variable);
+
 			# Extract the first word of the line
 			$line =~ m/$qr_first_word/;
 			my $first_word = coalesce($1, '');
@@ -662,6 +684,20 @@ sub compile_call {
 	# Validate input
 	&bomb("Invalid input to &compile_call") unless $chain;
 	&bomb("Invalid input to &compile_call") unless $rule;
+
+	# See if any variables are used in this rule. If so, call ourself
+	# recursively for each element in the var
+	if ($rule =~ m/\s$qr_variable\b/) {
+		my $var_name = $1;
+		foreach (@{$user_var{$var_name}}) {
+			my $var_value = $_;
+			my $recurse_rule = $rule;
+			$recurse_rule =~ s/\s%$var_name\b/ $var_value /;
+			&compile_call(chain=>$chain, line=>$recurse_rule);
+		}
+		# No need to continue from here; Return early.
+		return 1;
+	}
 	
 	# Hash to store all the individual parts of this rule
 	my %criteria;
@@ -1342,3 +1378,4 @@ sub usage {
 	printf "   %-25s %-50s\n", '--conf=/path/to/husk.conf', 'specify an alternate config file';
 	exit 1;
 }
+
