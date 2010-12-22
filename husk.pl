@@ -227,7 +227,13 @@ sub read_rules_file {
 			for (my $v = $line_cnt; 1; $v++) {
 				my $val = $lines[$v];
 				chomp($val);
+
+				$val = &cleanup_line($val);
+
+				next unless $val;
+
 				last if ($val =~ m/$qr_end_define/);
+
 				push(@{$user_var{$var_name}}, $val);
 			}
 			$in_def_variable = 1;
