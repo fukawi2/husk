@@ -319,10 +319,9 @@ sub new_call_chain {
 		if (defined($xzone_calls{$chain}));
 
 	# Is this a bridged interface? We need to use the physdev module if it is
-	# TODO: Make this detection a bit more intelligent
 	my $is_bridge;
-	$is_bridge = 1 if ($interface{$i_name} =~ m/br\d/i);
-	$is_bridge = 1 if ($interface{$o_name} =~ m/br\d/i);
+	$is_bridge = &is_bridged(eth=>$interface{$i_name});
+	$is_bridge = &is_bridged(eth=>$interface{$o_name});
 	
 	# Work out if this chain is called from INPUT, OUTPUT or FORWARD
 	my %criteria;
@@ -1334,6 +1333,25 @@ sub ipaddr {
 	my $addr = `ip a s dev $eth primary 2> /dev/null`;
 	if ($addr =~ m/inet ($qr_ip_address)/mg) {
 		return $1;
+	}
+	return undef;
+}
+
+sub is_bridged {
+	# See if an interface belongs to a bridge
+	my %args = @_;
+	my $eth = $args{'eth'};
+
+	# Validate what was passed
+	&bomb((caller(0))[3] . ' called without passing $eth') unless $eth;
+
+	# If the interface has a '+' then it's a wildcard so we
+	# need to replace it with the appropriate regex pattern.
+	$eth =~ s/\+$/(.+)/;
+
+	my $bridges = `brctl show 2> /dev/null`;
+	if ($bridges =~ m/\b$eth$/) {
+		return 1;
 	}
 	return undef;
 }
