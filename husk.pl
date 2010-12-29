@@ -320,8 +320,8 @@ sub new_call_chain {
 
 	# Is this a bridged interface? We need to use the physdev module if it is
 	my ($is_bridge_in, $is_bridge_out);
-	$is_bridge_in  = &is_bridged(eth=>$interface{$i_name});
-	$is_bridge_out = &is_bridged(eth=>$interface{$o_name});
+	$is_bridge_in  = &is_bridged(eth=>$interface{$i_name}) if ($interface{$i_name});
+	$is_bridge_out = &is_bridged(eth=>$interface{$o_name}) if ($interface{$o_name});
 	
 	# Work out if this chain is called from INPUT, OUTPUT or FORWARD
 	my %criteria;
