@@ -29,7 +29,7 @@ drop protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
 drop protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
 end define
 
-define rules INPUT
+define rules OUTPUT
 reject state new protocol tcp port 6667:6669	# No IRC from this box
 accept all
 end define
