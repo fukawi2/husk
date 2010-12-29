@@ -351,8 +351,10 @@ sub new_call_chain {
 	# Use the physdev module for rules across bridges
 	if ($is_bridge) {
 		$criteria{'module'}	= '-m physdev';
-		$criteria{'in'}		= $interface{$i_name} ? sprintf('--physdev-in %s', $interface{$i_name}) : '';
-		$criteria{'out'}	= $interface{$o_name} ? sprintf('--physdev-out %s', $interface{$o_name}) : '';
+		$criteria{'in'}		= $interface{$i_name} ? sprintf('--physdev-in %s', $interface{$i_name}) : ''
+			unless ($i_name =~ m/^ME$/);
+		$criteria{'out'}	= $interface{$o_name} ? sprintf('--physdev-out %s', $interface{$o_name}) : ''
+			unless ($o_name =~ m/^ME$/);
 	}
 
 	# Build the Rule
