@@ -319,9 +319,9 @@ sub new_call_chain {
 		if (defined($xzone_calls{$chain}));
 
 	# Is this a bridged interface? We need to use the physdev module if it is
-	my $is_bridge;
-	$is_bridge = &is_bridged(eth=>$interface{$i_name});
-	$is_bridge = &is_bridged(eth=>$interface{$o_name});
+	my ($is_bridge_in, $is_bridge_out);
+	$is_bridge_in  = &is_bridged(eth=>$interface{$i_name});
+	$is_bridge_out = &is_bridged(eth=>$interface{$o_name});
 	
 	# Work out if this chain is called from INPUT, OUTPUT or FORWARD
 	my %criteria;
@@ -349,10 +349,13 @@ sub new_call_chain {
 		$criteria{'in'} = sprintf('! -i %s', $interface{$o_name});
 	}
 	# Use the physdev module for rules across bridges
-	if ($is_bridge) {
+	if ($is_bridge_in) {
 		$criteria{'module'}	= '-m physdev';
 		$criteria{'in'}		= $interface{$i_name} ? sprintf('--physdev-in %s', $interface{$i_name}) : ''
 			unless ($i_name =~ m/^ME$/);
+	}
+	if ($is_bridge_out) {
+		$criteria{'module'}	= '-m physdev';
 		$criteria{'out'}	= $interface{$o_name} ? sprintf('--physdev-out %s', $interface{$o_name}) : ''
 			unless ($o_name =~ m/^ME$/);
 	}
@@ -1348,13 +1351,12 @@ sub is_bridged {
 	&bomb((caller(0))[3] . ' called without passing $eth') unless $eth;
 
 	# If the interface has a '+' then it's a wildcard so we
-	# need to replace it with the appropriate regex pattern.
-	$eth =~ s/\+$/(.+)/;
+	# need to take it out and let the regex below handle it.
+	$eth =~ s/\+$//;
 
 	my $bridges = `brctl show 2> /dev/null`;
-	if ($bridges =~ m/\b$eth$/) {
-		return 1;
-	}
+	return 1 if ($bridges =~ m/\b$eth$/m);
+	return 1 if ($bridges =~ m/\b$eth((\d|\.|:)+)?$/m);
 	return undef;
 }
 
