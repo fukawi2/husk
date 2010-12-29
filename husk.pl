@@ -319,6 +319,7 @@ sub new_call_chain {
 		if (defined($xzone_calls{$chain}));
 
 	# Is this a bridged interface? We need to use the physdev module if it is
+	# TODO: Make this detection a bit more intelligent
 	my $is_bridge;
 	$is_bridge = 1 if ($interface{$i_name} =~ m/br\d/i);
 	$is_bridge = 1 if ($interface{$o_name} =~ m/br\d/i);
