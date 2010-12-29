@@ -317,6 +317,11 @@ sub new_call_chain {
 	# Check if we've seen this call before
 	&bomb(sprintf("'%s' defined twice (second on line %s)", $line, $line_cnt))
 		if (defined($xzone_calls{$chain}));
+
+	# Is this a bridged interface? We need to use the physdev module if it is
+	my $is_bridge;
+	$is_bridge = 1 if ($interface{$i_name} =~ m/br\d/i);
+	$is_bridge = 1 if ($interface{$o_name} =~ m/br\d/i);
 	
 	# Work out if this chain is called from INPUT, OUTPUT or FORWARD
 	my %criteria;
@@ -343,12 +348,19 @@ sub new_call_chain {
 	if ($i_name =~ m/^ANY$/) {
 		$criteria{'in'} = sprintf('! -i %s', $interface{$o_name});
 	}
+	# Use the physdev module for rules across bridges
+	if ($is_bridge) {
+		$criteria{'module'}	= '-m physdev';
+		$criteria{'in'}		= $interface{$i_name} ? sprintf('--physdev-in %s', $interface{$i_name}) : '';
+		$criteria{'out'}	= $interface{$o_name} ? sprintf('--physdev-out %s', $interface{$o_name}) : '';
+	}
 
 	# Build the Rule
 	&ipt("-N $chain");
 	$xzone_calls{$chain} = collapse_spaces(sprintf(
-		'-A %s %s %s -m state --state NEW -j %s -m comment --comment "husk line %s"',
+		'-A %s %s %s %s -m state --state NEW -j %s -m comment --comment "husk line %s"',
 		$criteria{'chain'},
+		$criteria{'module'} ? $criteria{'module'} : '',
 		$criteria{'in'},
 		$criteria{'out'},
 		$chain,
