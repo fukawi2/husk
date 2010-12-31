@@ -24,6 +24,9 @@ if [ $EUID -ne 0 ] ; then
 	exit 1
 fi
 
+# Get command line args
+args=("$@")
+
 TIMEOUT=10
 IPT_SAVE=`which iptables-save 2>/dev/null`
 IPT_RESTORE=`which iptables-restore 2>/dev/null`
@@ -88,21 +91,23 @@ fi
 echo "Activating rules...."
 /bin/bash $TFILE
 
-echo -n "Can you establish NEW connections to the machine? (y/N) "
-read -n1 -t "${TIMEOUT:-15}" ret 2>&1 || :
-echo
-case "${ret:-}" in
-	(y*|Y*)
-		echo "Thank-you, come again!"
-		;;
-	(*)
-		if [[ -z "${ret:-}" ]]; then
-			echo "Uh-oh... Timeout waiting for reply!" >&2
-		fi
-		echo "Reverting to saved rules..." >&2
-		"$IPT_RESTORE" < "$SFILE";
-		exit 255
-		;;
-esac
+if [ "${args[0]}" == '--no-confirm' ] ; then
+	echo -n "Can you establish NEW connections to the machine? (y/N) "
+	read -n1 -t "${TIMEOUT}" ret 2>&1 || :
+	echo
+	case "${ret:-}" in
+		y*|Y*)
+			echo "Thank-you, come again!"
+			;;
+		*)
+			if [[ -z "${ret}" ]]; then
+				echo "Uh-oh... Timeout waiting for reply!" >&2
+			fi
+			echo "Reverting to saved rules..." >&2
+			"$IPT_RESTORE" < "$SFILE";
+			exit 255
+			;;
+	esac
+fi
 
 exit 0
