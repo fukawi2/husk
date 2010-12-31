@@ -9,3 +9,4 @@
     added a TODO note
     added support for bridged interfaces using physdev module
     updated regex for interface name matching validation
+==> Version 0.7.2
