@@ -251,10 +251,13 @@ sub read_rules_file {
 		}
 		elsif ($line =~ s/$qr_tgt_iptables//) {
 			# raw iptables command
-			&ipt(sprintf('%s -m comment --comment "husk line %s"',
-					&trim($line),
-					$line_cnt
-				));
+			my $raw_rule = &trim($line);
+			$raw_rule =~ s/%CHAIN%/$curr_chain/;
+
+			my $comment = sprintf('-m comment --comment "husk line %s"', $line_cnt);
+			$raw_rule =~ s/($curr_chain)/$1 $comment/;
+
+			&ipt($raw_rule);
 		}
 		elsif ($line =~ m/$qr_tgt_include/) {
 			# include another rules file
