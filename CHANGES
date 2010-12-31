@@ -10,3 +10,5 @@
     added support for bridged interfaces using physdev module
     updated regex for interface name matching validation
 ==> Version 0.7.2
+==> Version 0.7.2
+    'updated CHANGES file for commits between ver_0.7.1 to ver_0.7.2'
