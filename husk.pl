@@ -108,6 +108,10 @@ $BOGON_SOURCES{'192.0.0.0/24'} = 'IETF Protocol Assignment (RFC 5736)';
 $BOGON_SOURCES{'198.18.0.0/15'} = 'Benchmark Testing (RFC 2544)';
 $BOGON_SOURCES{'240.0.0.0/4'} = 'Class E Reserved (RFC 1112)';
 
+# Most of these rules gathered from "gotroot.com":
+# 	http://www.gotroot.com/Linux+Firewall+Rules
+# Included with permission granted via the "GOT ROOT LICENSE":
+# 	http://www.gotroot.com/Got+Root+License
 my %PORTSCAN_RULES;
 $PORTSCAN_RULES{'-p tcp --tcp-flags ALL FIN,URG,PSH'} = 'NMAP FIN/URG/PSH';
 $PORTSCAN_RULES{'-p tcp --tcp-flags SYN,RST SYN,RST'} = 'SYN/RST';
