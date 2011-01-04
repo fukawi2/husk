@@ -46,6 +46,7 @@ end define
 common loopback
 common nat NET
 common bogon NET
+common portscan NET
 common xmas NET
 common syn NET
 common spoof LAN 10.0.0.0/24
