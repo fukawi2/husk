@@ -502,11 +502,15 @@ sub close_rules {
 		# End with a default RETURN
 		&ipt(sprintf('-t %s -A %s -j RETURN', $SPOOF_TABLE, $SPOOF_CHAIN));
 
-		# JUMP this new chain
-		&ipt(sprintf('-t %s -I PREROUTING -m comment --comment "spoof protection" -j %s',
-				$SPOOF_TABLE,
-				$SPOOF_CHAIN,
-			));
+		# Jump the new chain for packets in the user-specified interfaces
+		foreach my $int (keys %spoof_protection) {
+			&ipt(sprintf('-t %s -I PREROUTING -i %s -j %s -m comment --comment "spoof protection for %s"',
+					$SPOOF_TABLE,
+					$interface{$int},
+					$SPOOF_CHAIN,
+					$int,
+				));
+		}
 	}
 	
 	# xmas Protection
