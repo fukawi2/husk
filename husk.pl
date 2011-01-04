@@ -41,6 +41,7 @@ my %user_var;			# User Defined Variables
 # somewhere to store info for the 'common' rules we have to include in the output
 my %spoof_protection;	# Hash of Arrays to store valid networks per interface (see &compile_standard)
 my @bogon_protection;	# Array of interfaces to provide bogon protection on
+my @portscan_protection;# Array of interfaces to provide portscan protection on
 my @xmas_protection;	# Array of interfaces to provide xmas packet protection on
 
 # compile some standard regex patterns
@@ -106,6 +107,14 @@ $BOGON_SOURCES{'203.0.113.0/24'} = 'TEST-NET-3 - APNIC (RFC 5737)';
 $BOGON_SOURCES{'192.0.0.0/24'} = 'IETF Protocol Assignment (RFC 5736)';
 $BOGON_SOURCES{'198.18.0.0/15'} = 'Benchmark Testing (RFC 2544)';
 $BOGON_SOURCES{'240.0.0.0/4'} = 'Class E Reserved (RFC 1112)';
+
+my %PORTSCAN_RULES;
+$PORTSCAN_RULES{'-p tcp --tcp-flags ALL FIN,URG,PSH'} = 'NMAP FIN/URG/PSH';
+$PORTSCAN_RULES{'-p tcp --tcp-flags SYN,RST SYN,RST'} = 'SYN/RST';
+$PORTSCAN_RULES{'-p tcp --tcp-flags SYN,FIN SYN,FIN'} = 'SYN/FIN';
+$PORTSCAN_RULES{'-p tcp --tcp-flags ALL FIN'} = 'NMAP FIN Stealth';
+$PORTSCAN_RULES{'-p tcp --tcp-flags ALL ALL'} = 'ALL/ALL';
+$PORTSCAN_RULES{'-p tcp --tcp-flags ALL NONE'} = 'NMAP Null Scan';
 
 # An array of reserved words that can't be used as target names
 my @RESERVED_WORDS = qw(
@@ -527,6 +536,43 @@ sub close_rules {
 				$XMAS_TABLE,
 				$interface{$int},
 				$XMAS_CHAIN,
+				$int,
+			));
+		}
+	}
+
+	if (scalar(@portscan_protection)) {
+		# Portscan Protection; per interface
+		my $PORTSCAN_CHAIN = 'cmn_PORTSCAN';
+		my $PORTSCAN_TABLE = 'mangle';
+
+		# Create a chain for portscan protection
+		&ipt(sprintf('-t %s -N %s', $PORTSCAN_TABLE, $PORTSCAN_CHAIN));
+
+		# Populate the new chain with rules
+		foreach my $ps_rule (sort(keys %PORTSCAN_RULES)) {
+			# LOG and DROP things that look like portscans
+			my $scan_desc = $PORTSCAN_RULES{$ps_rule};
+			log_and_drop(
+				table=>$PORTSCAN_TABLE,
+				chain=>$PORTSCAN_CHAIN,
+				prefix=>$scan_desc,
+				criteria=>sprintf(
+					'%s -m comment --comment "%s"',
+					$ps_rule,
+					$scan_desc,
+			));
+		}
+		# End with a default RETURN
+		&ipt(sprintf('-t %s -A %s -j RETURN', $PORTSCAN_TABLE, $PORTSCAN_CHAIN));
+
+		# Jump the new chain for packets in the user-specified interfaces
+		foreach my $int (@portscan_protection) {
+			&ipt(sprintf(
+				'-t %s -I PREROUTING -i %s -j %s -m comment --comment "portscan protection for %s"',
+				$PORTSCAN_TABLE,
+				$interface{$int},
+				$PORTSCAN_CHAIN,
 				$int,
 			));
 		}
@@ -1132,6 +1178,16 @@ sub compile_common {
 			unless ($interface{$iface});
 
 		push(@bogon_protection, $iface);
+	}
+	elsif ($line =~ m/^portscan ($qr_int_name)$/i) {
+		# portscan protection
+		my $iface = $1;
+
+		# Validate
+		&bomb(sprintf('Invalid interface specified for Portscan Protection: %s', $iface))
+			unless ($interface{$iface});
+
+		push(@portscan_protection, $iface);
 	}
 	elsif ($line =~ m/^xmas ($qr_int_name)$/i) {
 		# xmas packet rule
