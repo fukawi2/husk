@@ -264,7 +264,7 @@ sub read_rules_file {
 			$raw_rule =~ s/%CHAIN%/$curr_chain/;
 
 			my $comment = sprintf('-m comment --comment "husk line %s"', $line_cnt);
-			$raw_rule =~ s/($curr_chain)/$1 $comment/;
+			$raw_rule = sprintf('%s %s', $raw_rule, $comment);
 
 			&ipt($raw_rule);
 		}
