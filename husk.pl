@@ -113,12 +113,12 @@ $BOGON_SOURCES{'240.0.0.0/4'} = 'Class E Reserved (RFC 1112)';
 # Included with permission granted via the "GOT ROOT LICENSE":
 # 	http://www.gotroot.com/Got+Root+License
 my %PORTSCAN_RULES;
-$PORTSCAN_RULES{'-p tcp --tcp-flags ALL FIN,URG,PSH'} = 'NMAP FIN/URG/PSH';
-$PORTSCAN_RULES{'-p tcp --tcp-flags SYN,RST SYN,RST'} = 'SYN/RST';
-$PORTSCAN_RULES{'-p tcp --tcp-flags SYN,FIN SYN,FIN'} = 'SYN/FIN';
-$PORTSCAN_RULES{'-p tcp --tcp-flags ALL FIN'} = 'NMAP FIN Stealth';
-$PORTSCAN_RULES{'-p tcp --tcp-flags ALL ALL'} = 'ALL/ALL';
-$PORTSCAN_RULES{'-p tcp --tcp-flags ALL NONE'} = 'NMAP Null Scan';
+$PORTSCAN_RULES{'-p tcp --tcp-flags ALL FIN,URG,PSH'}	= 'PORTSCAN: NMAP FIN/URG/PSH';
+$PORTSCAN_RULES{'-p tcp --tcp-flags SYN,RST SYN,RST'}	= 'PORTSCAN: SYN/RST';
+$PORTSCAN_RULES{'-p tcp --tcp-flags SYN,FIN SYN,FIN'}	= 'PORTSCAN: SYN/FIN';
+$PORTSCAN_RULES{'-p tcp --tcp-flags ALL FIN'}			= 'PORTSCAN: NMAP FIN Stealth';
+$PORTSCAN_RULES{'-p tcp --tcp-flags ALL ALL'}			= 'PORTSCAN: ALL/ALL';
+$PORTSCAN_RULES{'-p tcp --tcp-flags ALL NONE'}			= 'PORTSCAN: NMAP Null Scan';
 
 # An array of reserved words that can't be used as target names
 my @RESERVED_WORDS = qw(
