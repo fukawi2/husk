@@ -62,7 +62,7 @@ my $qr_tgt_redirect	= qr/^(redirect|trap)\b/io;
 my $qr_tgt_map		= qr/^map\b/io;
 my $qr_tgt_common	= qr/^common\b/io;
 my $qr_tgt_iptables	= qr/^iptables\b/io;
-my $qr_tgt_include	= qr/^include\b(\S)$/io;
+my $qr_tgt_include	= qr/^include\b(.+)$/io;
 my $qr_end_define	= qr/^end\s+define\b?$/io;
 # regex precompilation for keyword matching and extraction
 my $qr_kw_protocol	= qr/\bproto(col)? ([\w]+)\b/io;
@@ -1383,7 +1383,7 @@ sub include_file {
 	my $orig_line_count = $line_cnt;
 
 	# Parse the include file;
-	&read_rules_file($fname);
+	&read_rules_file(fname=>$fname);
 
 	# Restore our line counter
 	$line_cnt = $orig_line_count;
