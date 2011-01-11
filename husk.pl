@@ -811,8 +811,8 @@ sub compile_call {
 		{$criteria{'dstrange'} = "$2-$3"};
 	if ($rule =~ s/$qr_kw_port//s) {
 		my $port = lc($3);
-		if (defined($2)) {
-			$kw = $2;	# Keyword
+		if (defined($1)) {
+			$kw = $1;	# Keyword
 			$criteria{'spt'} = $port if ($kw =~ m/^SOURCE$/i);
 			$criteria{'dpt'} = $port if ($kw =~ m/^DEST/i);
 		} else {
@@ -820,8 +820,8 @@ sub compile_call {
 		}
 	} elsif ($rule =~ s/$qr_kw_multiport//s) {
 		my $ports = lc($3);
-		if (defined($2)) {
-			$kw = $2;	# Keyword
+		if (defined($1)) {
+			$kw = $1;	# Keyword
 			$criteria{'spts'} = $ports if ($kw =~ m/^SOURCE$/i);
 			$criteria{'dpts'} = $ports if ($kw =~ m/^DEST/i);
 		} else {
