@@ -750,7 +750,7 @@ sub log_and_drop {
 			$table, $chain, $criteria,
 		)));
 
-	return undef;
+	return;
 }
 
 ###############################################################################
@@ -1411,7 +1411,7 @@ sub ipaddr {
 	if ($addr =~ m/inet ($qr_ip_address)/mg) {
 		return $1;
 	}
-	return undef;
+	return;
 }
 
 sub is_bridged {
@@ -1429,7 +1429,7 @@ sub is_bridged {
 	my $bridges = `brctl show 2> /dev/null`;
 	return 1 if ($bridges =~ m/\b$eth$/m);
 	return 1 if ($bridges =~ m/\b$eth((\d|\.|:)+)?$/m);
-	return undef;
+	return;
 }
 
 sub bomb {
@@ -1477,7 +1477,7 @@ sub coalesce {
 	foreach my $val (@args) {
 		return $val if $val;
 	}
-	return undef;
+	return;
 }
 
 sub timestamp {
