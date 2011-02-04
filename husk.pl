@@ -1475,7 +1475,7 @@ sub coalesce {
 	# coalescing here.
 	my @args = @_;
 	foreach my $val (@args) {
-		return $val if $val;
+		return $val if defined($val);
 	}
 	return;
 }
