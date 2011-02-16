@@ -76,8 +76,10 @@ my $qr_kw_src_host	= qr/\bsource group (\S+)\b/io;
 my $qr_kw_dst_host	= qr/\bdest(ination)? group (\S+)\b/io;
 my $qr_kw_src_range	= qr/\bsource range ($qr_ip_address) to ($qr_ip_address)\b/io;
 my $qr_kw_dst_range	= qr/\bdest(ination)? range ($qr_ip_address) to ($qr_ip_address)\b/io;
-my $qr_kw_port		= qr/\b(source|dest(ination)?)?\s*port (((\d|\w)+:?)+)\b/io;
-my $qr_kw_multiport	= qr/\b(source|dest(ination)?)?\s*ports (((\d|\w)+,?)+)\b/io;
+my $qr_kw_sport		= qr/\bsource\s+port\s+(((\d|\w)+:?)+)\b/io;
+my $qr_kw_dport		= qr/\b(dest(ination)?)?\s*port (((\d|\w)+:?)+)\b/io;
+my $qr_kw_multisport= qr/\bsource\s+ports\s+(((\d|\w)+,?)+)\b/io;
+my $qr_kw_multidport= qr/\b(dest(ination)?)?\s*ports\s+(((\d|\w)+,?)+)\b/io;
 my $qr_kw_limit		= qr/\blimit (\S+)\s*(burst (\d+))?\b/io;
 my $qr_kw_type		= qr/\btype (\S+)\b/io;
 my $qr_time24		= qr/([0-1]?\d|2[0-3]):([0-5]\d)(:([0-5]\d))?/o;
@@ -813,24 +815,21 @@ sub compile_call {
 		{$criteria{'srcrange'} = "$1-$2"};
 	if ($rule =~ s/$qr_kw_dst_range//s)
 		{$criteria{'dstrange'} = "$2-$3"};
-	if ($rule =~ s/$qr_kw_port//s) {
+	if ($rule =~ s/$qr_kw_sport//s) {
+		my $port = lc($1);
+		$criteria{'spt'} = $port;
+	}
+	if ($rule =~ s/$qr_kw_dport//s) {
 		my $port = lc($3);
-		if (defined($1)) {
-			$kw = $1;	# Keyword
-			$criteria{'spt'} = $port if ($kw =~ m/^SOURCE$/i);
-			$criteria{'dpt'} = $port if ($kw =~ m/^DEST/i);
-		} else {
-			$criteria{'dpt'} = $port;
-		}
-	} elsif ($rule =~ s/$qr_kw_multiport//s) {
+		$criteria{'dpt'} = $port;
+	}
+	if ($rule =~ s/$qr_kw_multisport//s) {
+		my $ports = lc($1);
+		$criteria{'spts'} = $ports;
+	}
+	if ($rule =~ s/$qr_kw_multidport//s) {
 		my $ports = lc($3);
-		if (defined($1)) {
-			$kw = $1;	# Keyword
-			$criteria{'spts'} = $ports if ($kw =~ m/^SOURCE$/i);
-			$criteria{'dpts'} = $ports if ($kw =~ m/^DEST/i);
-		} else {
-			$criteria{'dpts'} = $ports;
-		}
+		$criteria{'dpts'} = $ports;
 	}
 	if ($rule =~ s/$qr_kw_start//s)
 		{$criteria{'time_start'} = $1};
@@ -980,24 +979,21 @@ sub compile_nat {
 		{$criteria{'proto'}	= lc($2)}
 	if ($rule =~ s/$qr_kw_dst_ip//s)
 		{$criteria{'inet_ext'}	= lc($2)}
-	if ($rule =~ s/$qr_kw_port//s) {
+	if ($rule =~ s/$qr_kw_sport//s) {
+		my $port = lc($1);
+		$criteria{'spt'} = $port;
+	}
+	if ($rule =~ s/$qr_kw_dport//s) {
 		my $port = lc($3);
-		$kw = coalesce($2, '');
-		if ($kw) {
-			$criteria{'sport_ext'} = $port if ($kw =~ m/^SOURCE$/i);
-			$criteria{'dport_ext'} = $port if ($kw =~ m/^DEST/i);
-		} else {
-			$criteria{'dport_ext'} = $port;
-		}
-	} elsif ($rule =~ s/$qr_kw_multiport//s) {
+		$criteria{'dpt'} = $port;
+	}
+	if ($rule =~ s/$qr_kw_multisport//s) {
+		my $ports = lc($1);
+		$criteria{'spts'} = $ports;
+	}
+	if ($rule =~ s/$qr_kw_multidport//s) {
 		my $ports = lc($3);
-		$kw = coalesce($2, '');
-		if ($2) {
-			$criteria{'sports_ext'} = $ports if ($kw =~ m/^SOURCE$/i);
-			$criteria{'dports_ext'} = $ports if ($kw =~ m/^DEST/i);
-		} else {
-			$criteria{'dports_ext'} = $ports;
-		}
+		$criteria{'dpts'} = $ports;
 	}
 	if ($rule =~ s/to ([^: ]+)(:([0-9]+))?\b//si)
 		{$criteria{'inet_int'}	= $1}
@@ -1053,15 +1049,21 @@ sub compile_interception {
 		{$criteria{'proto'}	= lc($2)}
 	if ($rule =~ s/$qr_kw_dst_addr//s)
 		{$criteria{'inet_ext'}	= lc($2)}
-	if ($rule =~ s/$qr_kw_port//s) {
+	if ($rule =~ s/$qr_kw_sport//s) {
+		my $port = lc($1);
+		$criteria{'spt'} = $port;
+	}
+	if ($rule =~ s/$qr_kw_dport//s) {
 		my $port = lc($3);
-		$kw = coalesce($2, '');
-		if ($2) {
-			$criteria{'spt'} = $port if ($kw =~ m/^SOURCE$/i);
-			$criteria{'dpt'} = $port if ($kw =~ m/^DEST/i);
-		} else {
-			$criteria{'dpt'} = $port;
-		}
+		$criteria{'dpt'} = $port;
+	}
+	if ($rule =~ s/$qr_kw_multisport//s) {
+		my $ports = lc($1);
+		$criteria{'spts'} = $ports;
+	}
+	if ($rule =~ s/$qr_kw_multidport//s) {
+		my $ports = lc($3);
+		$criteria{'dpts'} = $ports;
 	}
 	if ($rule =~ s/to ([0-9]+)\b//si)
 		{$criteria{'port_redir'} = $1}
@@ -1076,6 +1078,8 @@ sub compile_interception {
 			$criteria{'inet_ext'}   ? "-d $criteria{'inet_ext'}"		: '',
 			$criteria{'spt'}		? "--sport $criteria{'spt'}"		: '',
 			$criteria{'dpt'}		? "--dport $criteria{'dpt'}"		: '',
+			$criteria{'spts'}		? "-m multiport --sports $criteria{'spts'}"		: '',
+			$criteria{'dpts'}		? "-m multiport --dports $criteria{'dpts'}"		: '',
 			$criteria{'port_redir'} ? "--to $criteria{'port_redir'}"	: '',
 		)));
 }
