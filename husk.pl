@@ -981,19 +981,19 @@ sub compile_nat {
 		{$criteria{'inet_ext'}	= lc($2)}
 	if ($rule =~ s/$qr_kw_sport//s) {
 		my $port = lc($1);
-		$criteria{'spt'} = $port;
+		$criteria{'sport_ext'} = $port;
 	}
 	if ($rule =~ s/$qr_kw_dport//s) {
 		my $port = lc($3);
-		$criteria{'dpt'} = $port;
+		$criteria{'dport_ext'} = $port;
 	}
 	if ($rule =~ s/$qr_kw_multisport//s) {
 		my $ports = lc($1);
-		$criteria{'spts'} = $ports;
+		$criteria{'sports_ext'} = $ports;
 	}
 	if ($rule =~ s/$qr_kw_multidport//s) {
 		my $ports = lc($3);
-		$criteria{'dpts'} = $ports;
+		$criteria{'dports_ext'} = $ports;
 	}
 	if ($rule =~ s/to ([^: ]+)(:([0-9]+))?\b//si)
 		{$criteria{'inet_int'}	= $1}
