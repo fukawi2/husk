@@ -12,3 +12,24 @@
 ==> Version 0.7.2
 ==> Version 0.7.2
     'updated CHANGES file for commits between ver_0.7.1 to ver_0.7.2'
+==> Version 0.8.0
+    fixed handling of ports in "map" rules
+    support for using source port and destination port in the same rule; support for multiport interception
+    small fix to my home-made coalesce function
+    code correctness for returning from procedure subs
+    added better code correctness for usage of next and last functions
+    wrong backref on source|dest ports
+    fixed broken file includes
+    updated logging options for log and drop
+    updated logging comment for portscan rules
+    added licensing details for portscan rules
+    fix incorrect logic on comparing --no-confirm flag in fire script
+    only jump antispoof chain for traffic on interfaced we're protecting
+    fixed the way we append the line number comment to raw iptables rules
+    added portscan to example rules
+    added portscan functionality to README
+    adjust logging options to prevent dos issues
+    added a "common" function for portscan protection
+    added a --no-confirm option to fire script
+    updated example rules to use current chain substitution in raw iptables
+    allow current chain substitution in raw iptables
