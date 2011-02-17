@@ -111,6 +111,11 @@ $BOGON_SOURCES{'203.0.113.0/24'} = 'TEST-NET-3 - APNIC (RFC 5737)';
 $BOGON_SOURCES{'192.0.0.0/24'} = 'IETF Protocol Assignment (RFC 5736)';
 $BOGON_SOURCES{'198.18.0.0/15'} = 'Benchmark Testing (RFC 2544)';
 $BOGON_SOURCES{'240.0.0.0/4'} = 'Class E Reserved (RFC 1112)';
+my %IPV6_BOGON_SOURCES;
+$IPV6_BOGON_SOURCES{'3fff:ffff::/32'} = 'EXAMPLENET-WF';
+$IPV6_BOGON_SOURCES{'2001:0DB8::/32'} = 'EXAMPLENET-WF';
+$IPV6_BOGON_SOURCES{'fec0/10'} = 'RFC 3879 Site Local Addresses';
+$IPV6_BOGON_SOURCES{'fe80/10'} = 'RFC 3879 Site Local Addresses';
 
 # Most of these rules gathered from "gotroot.com":
 # 	http://www.gotroot.com/Linux+Firewall+Rules
