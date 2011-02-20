@@ -1146,7 +1146,7 @@ sub compile_common {
 		&ipt(sprintf('-A INPUT ! -i lo -s 127.0.0.0/8 -j DROP -m comment --comment "husk line %s"', $line_cnt));
 		&ipt(sprintf('-A OUTPUT -o lo -j ACCEPT -m comment --comment "husk line %s"', $line_cnt));
 	}
-	elsif ($line =~ m/^syn\b?$/i) {
+	elsif ($line =~ m/^syn\b?/i) {
 		# syn protections
 		my $SYN_PROT_TABLE = 'mangle';
 		my $SYN_PROT_CHAIN = 'SYN_PROT';
