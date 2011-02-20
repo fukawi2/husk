@@ -744,7 +744,7 @@ sub log_and_drop {
 	&bomb((caller(0))[3] . ' called without passing $chain') unless $chain;
 
 	# LOG the packet
-	&ipt(&collapse_spaces(sprintf('%s -A %s %s -m limit --limit 1/second -j LOG --log-prefix="[%s] "',
+	&ipt(&collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
 			$table, $chain, $criteria, $log_prefix,
 		)));
 	# DROP the packet
