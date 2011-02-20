@@ -52,18 +52,18 @@ my $qr_ip_address	= qr/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-
 my $qr_ip_cidr		= qr/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/([0-9]{1,2}))?/o;
 my $qr_if_names		= qr/((eth|ppp|bond|tun|tap|sit|(xen)?br|vif)(\d+|\+)((\.|:)\d+)?|lo)/io;
 my $qr_int_name		= qr/\w+/o;
-my $qr_first_word	= qr/^(\w+)/o;
-my $qr_define_xzone	= qr/^define\s+rules\s+($qr_int_name)\s+to\s+($qr_int_name)$/io;
-my $qr_define_sub	= qr/^define\s+rules\s+(\w+)\b?$/io;
-my $qr_add_chain	= qr/^define\s+rules\s+(INPUT|FORWARD|OUTPUT)\b?$/io;
-my $qr_def_variable	= qr/^define\s+var(iable)?\s+(\w+)\b?$/io;
-my $qr_tgt_builtins	= qr/^(accept|drop|reject|log)\b/io;
-my $qr_tgt_redirect	= qr/^(redirect|trap)\b/io;
-my $qr_tgt_map		= qr/^map\b/io;
-my $qr_tgt_common	= qr/^common\b/io;
-my $qr_tgt_iptables	= qr/^iptables\b/io;
-my $qr_tgt_include	= qr/^include\b(.+)$/io;
-my $qr_end_define	= qr/^end\s+define\b?$/io;
+my $qr_first_word	= qr/\A(\w+)/o;
+my $qr_define_xzone	= qr/\Adefine\s+rules\s+($qr_int_name)\s+to\s+($qr_int_name)\z/io;
+my $qr_define_sub	= qr/\Adefine\s+rules\s+(\w+)\b?\z/io;
+my $qr_add_chain	= qr/\Adefine\s+rules\s+(INPUT|FORWARD|OUTPUT)\b?\z/io;
+my $qr_def_variable	= qr/\Adefine\s+var(iable)?\s+(\w+)\b?\z/io;
+my $qr_tgt_builtins	= qr/\A(accept|drop|reject|log)\b/io;
+my $qr_tgt_redirect	= qr/\A(redirect|trap)\b/io;
+my $qr_tgt_map		= qr/\Amap\b/io;
+my $qr_tgt_common	= qr/\Acommon\b/io;
+my $qr_tgt_iptables	= qr/\Aiptables\b/io;
+my $qr_tgt_include	= qr/\Ainclude\b(.+)\z/io;
+my $qr_end_define	= qr/\Aend\s+define\b?\z/io;
 # regex precompilation for keyword matching and extraction
 my $qr_kw_protocol	= qr/\bproto(col)? ([\w]+)\b/io;
 my $qr_kw_in_int	= qr/\bin ($qr_int_name)\b/io;
@@ -330,9 +330,9 @@ sub new_call_chain {
 
 	# Validate what we've found
 	&bomb(sprintf('Undefined "in" interface on line %s: %s', $line_cnt, $i_name))
-		unless ($interface{$i_name} or $i_name =~ m/^ANY$/);
+		unless ($interface{$i_name} or $i_name =~ m/\AANY\z/);
 	&bomb(sprintf('Undefined "out" interface on line %s: %s', $line_cnt, $o_name))
-		unless ($interface{$o_name} or $o_name =~ m/^ANY$/);
+		unless ($interface{$o_name} or $o_name =~ m/\AANY\z/);
 	
 	# Check if we've seen this call before
 	&bomb(sprintf("'%s' defined twice (second on line %s)", $line, $line_cnt))
@@ -352,32 +352,32 @@ sub new_call_chain {
 	$criteria{'in'}		= $interface{$i_name} ? sprintf('-i %s', $interface{$i_name}) : '';
 	$criteria{'out'}	= $interface{$o_name} ? sprintf('-o %s', $interface{$o_name}) : '';
 	# Override defaults if required
-	if ($o_name =~ m/^ME$/) {
+	if ($o_name =~ m/\AME\z/) {
 		$criteria{'chain'} = 'INPUT';
 		$criteria{'out'} = '';	# -o is invalid in INPUT table
 	}
-	if ($i_name =~ m/^ME$/) {
+	if ($i_name =~ m/\AME\z/) {
 		$criteria{'chain'} = 'OUTPUT';
 		$criteria{'in'} = '';	# -i is invalid in OUTPUT table
 	}
 	# Negate the opposite interface on ANY rules
 	# so we don't mess with bounce routing
-	if ($o_name =~ m/^ANY$/) {
+	if ($o_name =~ m/\AANY\z/) {
 		$criteria{'out'} = sprintf('! -o %s', $interface{$i_name});
 	}
-	if ($i_name =~ m/^ANY$/) {
+	if ($i_name =~ m/\AANY\z/) {
 		$criteria{'in'} = sprintf('! -i %s', $interface{$o_name});
 	}
 	# Use the physdev module for rules across bridges
 	if ($is_bridge_in) {
 		$criteria{'module'}	= '-m physdev';
 		$criteria{'in'}		= $interface{$i_name} ? sprintf('--physdev-in %s', $interface{$i_name}) : ''
-			unless ($i_name =~ m/^ME$/);
+			unless ($i_name =~ m/\AME\z/);
 	}
 	if ($is_bridge_out) {
 		$criteria{'module'}	= '-m physdev';
 		$criteria{'out'}	= $interface{$o_name} ? sprintf('--physdev-out %s', $interface{$o_name}) : ''
-			unless ($o_name =~ m/^ME$/);
+			unless ($o_name =~ m/\AME\z/);
 	}
 
 	# Build the Rule
@@ -599,7 +599,7 @@ sub close_rules {
 		foreach my $int_to (keys %interface) {
 			my $new_chain	= sprintf("%s_%s_%s", $xzone_prefix, $int_from, $int_to);
 			next InterfacesTo if ($xzone_calls{$new_chain});	# Don't create already existing chains
-			next InterfacesTo if ($int_from =~ m/^ME$/);		# Don't create OUTPUT chains
+			next InterfacesTo if ($int_from =~ m/\AME\z/);		# Don't create OUTPUT chains
 			next InterfacesTo if ($int_from eq $int_to);		# Don't create bounce chains
 
 			# Create new chain
@@ -657,17 +657,17 @@ sub generate_output {
 			#	also itemize each chain name into a hash per
 			#	table.
 			my $r = $_;
-			if ($r =~ m/(-t (filter|nat|mangle|raw))? ?(-[AI].*)$/g) {
+			if ($r =~ m/(-t (filter|nat|mangle|raw))? ?(-[AI].*)\z/g) {
 				my $t = 'filter';   # Default; could be overwritten on next line
 				$t = $2 if $2;
 				push(@{$split_rules{$t}}, $3);
-			} elsif ($r =~ m/-P (INPUT|FORWARD|OUTPUT) (DROP|ACCEPT)$/g) {
+			} elsif ($r =~ m/-P (INPUT|FORWARD|OUTPUT) (DROP|ACCEPT)\z/g) {
 				# Convert Policies
 				$policy{$1} = $2;
-			} elsif ($r =~ m/(-t (filter|nat|mangle|raw) )?-N (\S+)$/g) {
+			} elsif ($r =~ m/(-t (filter|nat|mangle|raw) )?-N (\S+)\z/g) {
 				$table = coalesce($2, 'filter');
 				push(@{$chain_names{$table}}, $3);
-			} elsif ($r =~ m/(-t (filter|nat|mangle|raw) )?(-[XFZ] (\S+)( \S+))?$/g) {
+			} elsif ($r =~ m/(-t (filter|nat|mangle|raw) )?(-[XFZ] (\S+)( \S+))?\z/g) {
 				my $c = $1;
 			} else {
 				print "WTF ERROR; $r\n";
@@ -841,7 +841,7 @@ sub compile_call {
 			 $criteria{'time_days'} .= substr($day, 0, 2) . ',';
 		 }
 		 # Strip the trailing comma
-		 $criteria{'time_days'} =~ s/,$//;
+		 $criteria{'time_days'} =~ s/,\z//;
 	};
 	if ($rule =~ s/$qr_kw_every//s)
 		{$criteria{'statistics_every'} = $1};
@@ -1255,7 +1255,7 @@ sub read_config_file {
 	# validate config
 	{
 		# strip trailing slash from conf_dir
-		$conf_dir =~ s/\/*$//g;
+		$conf_dir =~ s/\/*\z//g;
 
 		# check everything actually exists
 		&bomb(sprintf('Configuration dir not found: %s', $conf_dir))
@@ -1291,6 +1291,8 @@ sub load_interfaces {
 	my %args = @_;
 	my $fname = $args{'fname'};
 
+	my $qr_NAME_ZONE = qr/\Azone\s+(\w+)\s+is\s+($qr_if_names)\b?\z/io;
+
 	# Validate what was passed
 	&bomb((caller(0))[3] . ' called without passing fname') unless $fname;
 
@@ -1308,7 +1310,7 @@ sub load_interfaces {
 		# ignore if the line is blank
 		next InterfacesLoop unless $line;
 
-		if ($line =~ m/^zone\s+(\w+)\s+is\s+($qr_if_names)\b?$/i) {
+		if ($line =~ m/$qr_NAME_ZONE/) {
 			$name	= uc($1);
 			$int	= $2;
 		} else {
@@ -1316,12 +1318,12 @@ sub load_interfaces {
 		}
 
         # make sure it's not already defined
-        $fname =~ s/^.*\///; # 'basename' the full path
+        $fname = &basename($fname);
         &bomb(sprintf('Zone "%s" defined twice in "%s"', $name, $fname))
             if ($interface{$name});
         for my $i ( keys %interface ) {
 			&bomb(sprintf('Interface "%s" named twice in "%s"', $int, $fname))
-				if ($interface{$i} =~ m/^$int$/);
+				if ($interface{$i} =~ m/\A$int\z/);
         }
 
 		# add to the hash
@@ -1330,7 +1332,7 @@ sub load_interfaces {
 
 	# Make sure we have a ME = lo definition
 	&bomb(sprintf('Interface "lo" must be defined as "ME" in "%s"', $fname))
-		unless ($interface{'ME'} =~ m/^lo$/);
+		unless ($interface{'ME'} =~ m/\Alo\z/);
 }
 
 ###############################################################################
@@ -1437,7 +1439,7 @@ sub is_bridged {
 
 	# If the interface has a '+' then it's a wildcard so we
 	# need to take it out and let the regex below handle it.
-	$eth =~ s/\+$//;
+	$eth =~ s/\+\z//;
 
 	my $bridges = `brctl show 2> /dev/null`;
 	return 1 if ($bridges =~ m/\b$eth$/m);
@@ -1462,24 +1464,33 @@ sub dbg {
 	print "DEBUG: $msg\n";
 }
 
+sub basename {
+	my $s = $1;
+	$s =~ s/\A.*\///;
+	return $s;
+}
+
 sub collapse_spaces {
 	# Collapse multiple spaces into a single
 	# space in the supplied string.
 	my ($string) = @_;
 	return $string = join(' ', split(' ', $string));
 }
+
 sub trim {
 	my $string = shift;
-	$string =~ s/^\s+//;
-	$string =~ s/\s+$//;
+	$string =~ s/\A\s+//;
+	$string =~ s/\s+\z//;
 	return $string;
 }
+
 sub cleanup_line {
 	my ($line) = @_;
 	# Strip Comments and Trim
-	$line =~ s/\s*#.*$//g;
+	$line =~ s/\s*#.*\z//;
 	$line = &trim($line);
 }
+
 sub coalesce {
 	# Perl 5.10 supports a proper coalesce operator (//) but
 	# it isn't widely packaged and distributed yet (well, I've
@@ -1495,7 +1506,10 @@ sub coalesce {
 
 sub timestamp {
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-	sprintf "%4d-%02d-%02d %02d:%02d:%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+	return sprintf(
+		"%4d-%02d-%02d %02d:%02d:%02d", 
+		$year+1900, $mon+1, $mday, $hour, $min, $sec
+	);
 }
 
 sub usage {
