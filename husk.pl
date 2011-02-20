@@ -442,6 +442,10 @@ sub close_rules {
 		# Create a chain for bogon protection
 		&ipt(sprintf('-t %s -N %s', $BOGON_TABLE, $BOGON_CHAIN));
 
+		# Special exceptions
+		#  - Broadcast shouldn't be caught as a bogon as part of Class E/4
+		&ipt(sprintf('-t %s -I %s -d 255.255.255.255 -j RETURN', $BOGON_TABLE, $BOGON_CHAIN));
+
 		# Populate the new chain with rules
 		foreach my $bogon_src (sort(keys %BOGON_SOURCES)) {
 			# LOG and DROP bad sources (bogons)
