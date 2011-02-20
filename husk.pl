@@ -1089,11 +1089,11 @@ sub compile_common {
 	my ($line) = @_;
 
 	my $qr_OPTS			= qr/\b?(.+)?/o;
-	my $qr_CMN_NAT		= qr/\Anat ($qr_int_name)/io;
+	my $qr_CMN_NAT		= qr/\Anat ($qr_int_name)/io;	# No \z on here because there's extra processing done in the if block
 	my $qr_CMN_LOOPBACK	= qr/\Aloopback\z/io;
 	my $qr_CMN_SYN		= qr/\Asyn\b?\z/io;
 	my $qr_CMN_SPOOF	= qr/\Aspoof ($qr_int_name)$qr_OPTS\z/io;
-	my $qr_CMN_BOGON	= qr/\Abogon ($qr_int_name)$qr_OPTS\z/io;
+	my $qr_CMN_BOGON	= qr/\Abogon ($qr_int_name)$qr_OPTS\z/io;	# TODO: Use options for 'nolog'
 	my $qr_CMN_PORTSCAN	= qr/\Aportscan ($qr_int_name)\z/io;
 	my $qr_CMN_XMAS		= qr/\Axmas ($qr_int_name)\z/io;
 
@@ -1102,7 +1102,7 @@ sub compile_common {
 	$line = &cleanup_line($line);
 
 	if ($line =~ m/$qr_CMN_NAT/) {
-		# SNAT traffic out a givein interface
+		# SNAT traffic out a given interface
 		my $snat_oeth = uc($1);
 		my $snat_chain = sprintf('snat_%s', $snat_oeth);
 
