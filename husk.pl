@@ -1088,11 +1088,20 @@ sub compile_common {
 	# Compiles a 'common' rule into an iptables rule.
 	my ($line) = @_;
 
+	my $qr_OPTS			= qr/\b?(.+)?/o;
+	my $qr_CMN_NAT		= qr/\Anat ($qr_int_name)/io;
+	my $qr_CMN_LOOPBACK	= qr/\Aloopback\z/io;
+	my $qr_CMN_SYN		= qr/\Asyn\b?\z/io;
+	my $qr_CMN_SPOOF	= qr/\Aspoof ($qr_int_name)$qr_OPTS\z/io;
+	my $qr_CMN_BOGON	= qr/\Abogon ($qr_int_name)$qr_OPTS\z/io;
+	my $qr_CMN_PORTSCAN	= qr/\Aportscan ($qr_int_name)\z/io;
+	my $qr_CMN_XMAS		= qr/\Axmas ($qr_int_name)\z/io;
+
 	# strip out the leading 'common' keyword
 	$line =~ s/$qr_tgt_common//s;
 	$line = &cleanup_line($line);
 
-	if ($line =~ m/^nat ($qr_int_name)/i) {
+	if ($line =~ m/$qr_CMN_NAT/) {
 		# SNAT traffic out a givein interface
 		my $snat_oeth = uc($1);
 		my $snat_chain = sprintf('snat_%s', $snat_oeth);
@@ -1140,13 +1149,13 @@ sub compile_common {
 			));
 		}
 	}
-	elsif ($line =~ m/^loopback$/i) {
+	elsif ($line =~ m/$qr_CMN_LOOPBACK/) {
 		# loopback accept
 		&ipt(sprintf('-A INPUT -i lo -j ACCEPT -m comment --comment "husk line %s"', $line_cnt));
 		&ipt(sprintf('-A INPUT ! -i lo -s 127.0.0.0/8 -j DROP -m comment --comment "husk line %s"', $line_cnt));
 		&ipt(sprintf('-A OUTPUT -o lo -j ACCEPT -m comment --comment "husk line %s"', $line_cnt));
 	}
-	elsif ($line =~ m/^syn\b?/i) {
+	elsif ($line =~ m/$qr_CMN_SYN/) {
 		# syn protections
 		my $SYN_PROT_TABLE = 'mangle';
 		my $SYN_PROT_CHAIN = 'SYN_PROT';
@@ -1167,7 +1176,7 @@ sub compile_common {
 				$line_cnt,
 			));
 	}
-	elsif ($line =~ m/^spoof ($qr_int_name) (.+)$/i) {
+	elsif ($line =~ m/$qr_CMN_SPOOF/) {
 		# antispoof rule
 		my $iface = $1;
 		my $src = $2;
@@ -1183,7 +1192,7 @@ sub compile_common {
 		#   {LAN} => ( 10.0.0.0/24 10.0.1.0/24 )
 		push(@{$spoof_protection{$iface}}, $src);
 	}
-	elsif ($line =~ m/^bogon ($qr_int_name)$/i) {
+	elsif ($line =~ m/$qr_CMN_BOGON/) {
 		# antibogon rule
 		# The term "bogon" stems from hacker jargon, where it is defined
 		# as the quantum of "bogosity", or the property of being bogus.
@@ -1195,7 +1204,7 @@ sub compile_common {
 
 		push(@bogon_protection, $iface);
 	}
-	elsif ($line =~ m/^portscan ($qr_int_name)$/i) {
+	elsif ($line =~ m/$qr_CMN_PORTSCAN/) {
 		# portscan protection
 		my $iface = $1;
 
@@ -1205,7 +1214,7 @@ sub compile_common {
 
 		push(@portscan_protection, $iface);
 	}
-	elsif ($line =~ m/^xmas ($qr_int_name)$/i) {
+	elsif ($line =~ m/$qr_CMN_XMAS/) {
 		# xmas packet rule
 		my $iface = $1;
 		
