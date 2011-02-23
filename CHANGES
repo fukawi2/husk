@@ -33,3 +33,13 @@
     added a --no-confirm option to fire script
     updated example rules to use current chain substitution in raw iptables
     allow current chain substitution in raw iptables
+* ==> Version 0.8.1
+    cleanup of regexes and creation of basename function
+    comment fixes
+    change compile_common to use precompiled regex
+    Revert "added bogon exception for 255.255.255.255"
+    
+    This reverts commit 0bd1cfc417d1445c4a2aed1d61fc4cbe24627ed4.
+    added bogon exception for 255.255.255.255
+    reduce log flooding of BOGON packets
+    fixed bad regex for "common syn" rules
