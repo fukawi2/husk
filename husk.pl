@@ -1117,13 +1117,11 @@ sub compile_common {
 		my $snat_ip;
 		if ($line =~ s/\bto\s+($qr_ip_address)\b//si) {
 			$snat_ip = $1;
-		} else {
-			$snat_ip = &ipaddr(eth=>$interface{$1});
 		}
 		
 		# Add SNAT rules to the SNAT chain
 		if ($snat_ip) {
-			# Do a SNAT
+			# User specified a SNAT address
 			&ipt(&collapse_spaces(sprintf(
 					'-t nat -A %s -j SNAT --to %s -m comment --comment "husk line %s"',
 					$snat_chain,
@@ -1131,7 +1129,13 @@ sub compile_common {
 					$line_cnt,
 			)));
 		} else {
-			# Do MASQUERADE
+			# Default to MASQUERADE
+			# This allows the 'src' argument in the kernel to
+			# be used to specify the source address used for
+			# outgoing packets. Useful in configurations where
+			# HA is used, and there is a 'src' argument to tell
+			# the kernel to prefer the Virtual Address as the
+			# source.
 			&ipt(&collapse_spaces(sprintf(
 					'-t nat -A %s -j MASQUERADE -m comment --comment "husk line %s"',
 					$snat_chain,
@@ -1412,21 +1416,6 @@ sub include_file {
 sub ipt {
 	my ($line) = @_;
 	push(@output_rules, $line);
-}
-
-sub ipaddr {
-	# Find the IP Address for an interface
-	my %args = @_;
-	my $eth = $args{'eth'};
-
-	# Validate what was passed
-	&bomb((caller(0))[3] . ' called without passing $eth') unless $eth;
-
-	my $addr = `ip a s dev $eth primary 2> /dev/null`;
-	if ($addr =~ m/inet ($qr_ip_address)/mg) {
-		return $1;
-	}
-	return;
 }
 
 sub is_bridged {
