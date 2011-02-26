@@ -481,9 +481,10 @@ sub close_rules {
 
 		foreach my $iface (keys %spoof_protection) {
 			# RETURN if the packet is sourced from 0.0.0.0 (eg, DHCP Discover)
-			&ipt(sprintf('-t %s -A %s -s 0.0.0.0 -p udp --sport 68 --dport 67 -m comment --comment "DHCP Discover bypasses spoof protection" -j RETURN',
+			&ipt(sprintf('-t %s -A %s -i %s -s 0.0.0.0 -p udp --sport 68 --dport 67 -m comment --comment "DHCP Discover bypasses spoof protection" -j RETURN',
 					$SPOOF_TABLE,
 					$SPOOF_CHAIN,
+					$interface{$iface},
 				));
 
 			# RETURN if the packet is from a known-good source (as specified by user)
