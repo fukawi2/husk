@@ -67,8 +67,8 @@ my $qr_tgt_include	= qr/\Ainclude\b(.+)\z/io;
 my $qr_end_define	= qr/\Aend\s+define\b?\z/io;
 # regex precompilation for keyword matching and extraction
 my $qr_kw_protocol	= qr/\bproto(col)? ([\w]+)\b/io;
-my $qr_kw_in_int	= qr/\bin ($qr_int_name)\b/io;
-my $qr_kw_out_int	= qr/\bout ($qr_int_name)\b/io;
+my $qr_kw_in_int	= qr/\bin(coming)? ($qr_int_name)\b/io;
+my $qr_kw_out_int	= qr/\bout(coming)? ($qr_int_name)\b/io;
 my $qr_kw_src_addr	= qr/\bsource address ($qr_hostname|$qr_ip_cidr)\b/io;
 my $qr_kw_dst_addr	= qr/\bdest(ination)? address ($qr_hostname|$qr_ip_cidr)(:(.+))?\b/io;
 my $qr_kw_src_ip	= qr/\bsource address ($qr_ip_cidr)(:(.+))?\b/io;
@@ -827,9 +827,9 @@ sub compile_call {
 	if ($rule =~ s/$qr_kw_protocol//s)
 		{$criteria{'proto'} = lc($2)};
 	if ($rule =~ s/$qr_kw_in_int//s)
-		{$criteria{'i_name'} = $interface{uc($1)}};
+		{$criteria{'i_name'} = $interface{uc($2)}};
 	if ($rule =~ s/$qr_kw_out_int//s)
-		{$criteria{'o_name'} = $interface{uc($1)}};
+		{$criteria{'o_name'} = $interface{uc($2)}};
 	if ($rule =~ s/$qr_kw_src_addr//s)
 		{$criteria{'src'} = lc($1)};
 	if ($rule =~ s/$qr_kw_dst_addr//s)
@@ -1001,7 +1001,7 @@ sub compile_nat {
 	my %criteria;
 
 	if ($rule =~ s/$qr_kw_in_int//s)
-		{$criteria{'in'}	= uc($1)}
+		{$criteria{'in'}	= uc($2)}
 	if ($rule =~ s/$qr_kw_protocol//s)
 		{$criteria{'proto'}	= lc($2)}
 	if ($rule =~ s/$qr_kw_dst_ip//s)
@@ -1071,7 +1071,7 @@ sub compile_interception {
 	my %criteria;
 
 	if ($rule =~ s/$qr_kw_in_int//s)
-		{$criteria{'in'}	= uc($1)}
+		{$criteria{'in'}	= uc($2)}
 	if ($rule =~ s/$qr_kw_protocol//s)
 		{$criteria{'proto'}	= lc($2)}
 	if ($rule =~ s/$qr_kw_dst_addr//s)
