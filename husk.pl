@@ -435,12 +435,22 @@ sub close_chain {
 }
 
 sub close_rules {
+	# The tables and chains to put our various
+	# "common" protection rules into.
+	my $BOGON_TABLE		= 'mangle';
+	my $BOGON_CHAIN		= 'cmn_BOGON';
+	my $SPOOF_TABLE		= 'mangle';
+	my $SPOOF_CHAIN		= 'cmn_SPOOF';
+	my $SYN_PROT_TABLE	= 'mangle';
+	my $SYN_PROT_CHAIN	= 'cmn_SYN';
+	my $XMAS_TABLE		= 'mangle';
+	my $XMAS_CHAIN		= 'cmn_XMAS';
+	my $PORTSCAN_TABLE	= 'mangle';
+	my $PORTSCAN_CHAIN	= 'cmn_PORTSCAN';
+
 	# setup 'common' rules and chains
 	if (scalar(@bogon_protection)) {
 		# Bogon Protection; per interface
-		my $BOGON_CHAIN = 'cmn_BOGON';
-		my $BOGON_TABLE = 'mangle';
-
 		# Create a chain for bogon protection
 		&ipt(sprintf('-t %s -N %s', $BOGON_TABLE, $BOGON_CHAIN));
 
@@ -474,9 +484,6 @@ sub close_rules {
 	
 	if (scalar(keys %spoof_protection)) {
 		# Antispoof rules; Per interface
-		my $SPOOF_CHAIN = 'cmn_SPOOF';
-		my $SPOOF_TABLE = 'mangle';
-
 		# Create a chain to log and drop 
 		&ipt(sprintf('-t %s -N %s', $SPOOF_TABLE, $SPOOF_CHAIN));
 
@@ -527,9 +534,6 @@ sub close_rules {
 	# SYN Protection
 	if (scalar(@syn_protection)) {
 		# Block NEW packets without SYN set
-		my $SYN_PROT_TABLE = 'mangle';
-		my $SYN_PROT_CHAIN = 'cmn_SYN';
-
 		&ipt(sprintf('-t %s -N %s', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
 		log_and_drop(
 			table=>$SYN_PROT_TABLE,
@@ -553,9 +557,6 @@ sub close_rules {
 	# xmas Protection
 	if (scalar(@xmas_protection)) {
 		# Block Xmas Packets
-		my $XMAS_CHAIN = 'cmn_XMAS';
-		my $XMAS_TABLE = 'mangle';
-
 		&ipt(sprintf('-t %s -N %s', $XMAS_TABLE, $XMAS_CHAIN));
 		log_and_drop(
 			table=>$XMAS_TABLE,
@@ -584,9 +585,6 @@ sub close_rules {
 
 	if (scalar(@portscan_protection)) {
 		# Portscan Protection; per interface
-		my $PORTSCAN_CHAIN = 'cmn_PORTSCAN';
-		my $PORTSCAN_TABLE = 'mangle';
-
 		# Create a chain for portscan protection
 		&ipt(sprintf('-t %s -N %s', $PORTSCAN_TABLE, $PORTSCAN_CHAIN));
 
@@ -1620,4 +1618,3 @@ sub usage {
 	printf "   %-25s %-50s\n", '--conf=/path/to/husk.conf', 'specify an alternate config file';
 	exit 1;
 }
-
