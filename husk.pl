@@ -1438,6 +1438,48 @@ sub is_bridged {
 	return;
 }
 
+sub get_network_address {
+	# Thanks to 'unixfoo' via http://nixcraft.com/shell-scripting/11398-simple-ipcalc-perl-script.html
+	my %args = @_;
+	my $ipaddr	= $args{'ipaddr'};
+	my $nmask	= $args{'nmask'};
+
+	my @addrarr = split(/\./, $ipaddr);
+	my ( $ipaddress ) = unpack("N", pack("C4", @addrarr));
+
+	my @maskarr = split(/\./, $nmask);
+	my ( $netmask ) = unpack("N", pack("C4", @maskarr));
+
+	# Calculate network address by logical AND operation of addr & netmask
+	# and convert network address to IP address format
+	my $netadd = ( $ipaddress & $netmask );
+	my @netarr = unpack("C4", pack("N", $netadd));
+	my $netaddress = join(".", @netarr);
+
+	return $netaddress;
+}
+
+sub get_broadcast_address {
+	# Thanks to 'unixfoo' via http://nixcraft.com/shell-scripting/11398-simple-ipcalc-perl-script.html
+	my %args = @_;
+	my $ipaddr	= $args{'ipaddr'};
+	my $nmask	= $args{'nmask'};
+
+	my @addrarr = split(/\./, $ipaddr);
+	my ( $ipaddress ) = unpack("N", pack("C4", @addrarr));
+
+	my @maskarr = split(/\./, $nmask);
+	my ( $netmask ) = unpack("N", pack("C4", @maskarr));
+
+	# Calculate broadcast address by inverting the netmask
+	# and do a logical or with network address
+	my $bcast = ( $ipaddress & $netmask ) + ( ~ $netmask );
+	my @bcastarr=unpack( "C4", pack( "N",$bcast ) ) ;
+	my $broadcast=join(".",@bcastarr);
+
+	return $broadcast;
+}
+
 sub bomb {
 	# Error handling; Yay!
 	my ($msg) = @_; $msg = 'Unspecified Error' unless $msg;
