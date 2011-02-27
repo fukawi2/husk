@@ -43,6 +43,7 @@ my %spoof_protection;	# Hash of Arrays to store valid networks per interface (se
 my @bogon_protection;	# Array of interfaces to provide bogon protection on
 my @portscan_protection;# Array of interfaces to provide portscan protection on
 my @xmas_protection;	# Array of interfaces to provide xmas packet protection on
+my @syn_protection;		# Array of interfaces to provide NEW NO SYN protection on
 
 # compile some standard regex patterns
 # any variables starting with "qr_" are precompiled regexes
@@ -523,6 +524,32 @@ sub close_rules {
 		}
 	}
 	
+	# SYN Protection
+	if (scalar(@syn_protection)) {
+		# Block NEW packets without SYN set
+		my $SYN_PROT_TABLE = 'mangle';
+		my $SYN_PROT_CHAIN = 'cmn_SYN';
+
+		&ipt(sprintf('-t %s -N %s', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
+		log_and_drop(
+			table=>$SYN_PROT_TABLE,
+			chain=>$SYN_PROT_CHAIN,
+			prefix=>'NEW_NO_SYN',
+			criteria=>'-p tcp ! --syn'
+		);
+		# RETURN by default
+		&ipt(sprintf('-t %s -A %s -j RETURN', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
+		foreach my $int (@syn_protection) {
+			&ipt(sprintf(
+				'-t %s -I PREROUTING -i %s -p tcp -m state --state NEW -j %s -m comment --comment "syn protection for %s"',
+				$SYN_PROT_TABLE,
+				$interface{$int},
+				$SYN_PROT_CHAIN,
+				$int,
+			));
+		}
+	}
+
 	# xmas Protection
 	if (scalar(@xmas_protection)) {
 		# Block Xmas Packets
@@ -1093,7 +1120,7 @@ sub compile_common {
 	my $qr_OPTS			= qr/\b?(.+)?/o;
 	my $qr_CMN_NAT		= qr/\Anat ($qr_int_name)/io;	# No \z on here because there's extra processing done in the if block
 	my $qr_CMN_LOOPBACK	= qr/\Aloopback\z/io;
-	my $qr_CMN_SYN		= qr/\Asyn\b?\z/io;
+	my $qr_CMN_SYN		= qr/\Asyn\s($qr_int_name)\z/io;
 	my $qr_CMN_SPOOF	= qr/\Aspoof ($qr_int_name)$qr_OPTS\z/io;
 	my $qr_CMN_BOGON	= qr/\Abogon ($qr_int_name)$qr_OPTS\z/io;	# TODO: Use options for 'nolog'
 	my $qr_CMN_PORTSCAN	= qr/\Aportscan ($qr_int_name)\z/io;
@@ -1163,24 +1190,13 @@ sub compile_common {
 	}
 	elsif ($line =~ m/$qr_CMN_SYN/) {
 		# syn protections
-		my $SYN_PROT_TABLE = 'mangle';
-		my $SYN_PROT_CHAIN = 'SYN_PROT';
+		my $iface = $1;
 
-		# Create the chain
-		&ipt(sprintf('-t %s -N %s', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
-		# Log first
-		log_and_drop(
-			table=>$SYN_PROT_TABLE,
-			chain=>$SYN_PROT_CHAIN,
-			prefix=>'NEW_NO_SYN',
-			criteria=>'-p tcp ! --syn'
-		);
-		# Call the SYN protection chain from PREROUTING for packets in a NEW connection
-		&ipt(sprintf('-t %s -A PREROUTING -m state --state NEW -j %s -m comment --comment "husk line %s"',
-				$SYN_PROT_TABLE,
-				$SYN_PROT_CHAIN,
-				$line_cnt,
-			));
+		# Validate
+		&bomb(sprintf('Invalid interface specified for SYN Protection: %s', $iface))
+			unless ($interface{$iface});
+
+		push(@syn_protection, $iface);
 	}
 	elsif ($line =~ m/$qr_CMN_SPOOF/) {
 		# antispoof rule
