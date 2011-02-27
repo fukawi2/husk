@@ -1480,6 +1480,56 @@ sub get_broadcast_address {
 	return $broadcast;
 }
 
+sub cidr2netmask {
+	# Thanks to: http://icmp.ru/man/cisco/cookbook/ciscockbk-CHP-5-SECT-3.htm
+	my ($cidr) = @_;
+	my @netmask;
+
+	# Strip any leading /
+	$cidr =~ s/\A\/(\d+)\z/$1/;
+
+	# Validate CIDR is valid
+	&bomb('Invalid CIDR Mask: '.$cidr)
+		unless ($cidr >= 0 and $cidr <= 32);
+
+	if ($cidr <= 8) {
+		$netmask[0] = &bits_to_dec($cidr);
+		$netmask[1] = 0;
+		$netmask[2] = 0;
+		$netmask[3] = 0;
+	} elsif ($cidr <= 16) {
+		$netmask[0] = 255;
+		$netmask[1] = &bits_to_dec($cidr-8);
+		$netmask[2] = 0;
+		$netmask[3] = 0;
+	} elsif ($cidr <= 24) {
+		$netmask[0] = 255;
+		$netmask[1] = 255;
+		$netmask[2] = &bits_to_dec($cidr-16);
+		$netmask[3] = 0;
+	} elsif ($cidr <= 32) {
+		$netmask[0] = 255;
+		$netmask[1] = 255;
+		$netmask[2] = 255;
+		$netmask[3] = &bits_to_dec($cidr-24);
+	}
+	return join('.', @netmask);
+}
+
+sub bits_to_dec(  ) {
+	my ($bits) = @_;
+
+	if($bits == 0 ) { return 0; }
+	if($bits == 1 ) { return 128; }
+	if($bits == 2 ) { return 192; }
+	if($bits == 3 ) { return 224; }
+	if($bits == 4 ) { return 240; }
+	if($bits == 5 ) { return 248; }
+	if($bits == 6 ) { return 252; }
+	if($bits == 7 ) { return 254; }
+	if($bits == 8 ) { return 255; }
+}
+
 sub bomb {
 	# Error handling; Yay!
 	my ($msg) = @_; $msg = 'Unspecified Error' unless $msg;
