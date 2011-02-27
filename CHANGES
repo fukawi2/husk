@@ -43,3 +43,17 @@
     added bogon exception for 255.255.255.255
     reduce log flooding of BOGON packets
     fixed bad regex for "common syn" rules
+* ==> Version 0.8.2
+    moved definition of "common" protection chain/table locations to top of &close_rules for better readability
+    error handle unknown "common" rules
+    make syn protection per interface instead of global
+    added subs to convert CIDR masks to netmasks
+    added subs to calculate network address and broadcast address for a subnet
+    added input interface as criteria for DHCP anti-spoof bypass
+    fixed regex to handle ports with - in the port name
+    always use MASQUERADE for "snat" rules unless user specifies a src address
+    
+    This allows the 'src' argument in the kernel to be used to specify the
+    source address used for outgoing packets. Useful in configurations where
+    HA is used, and there is a 'src' argument to tell the kernel to prefer
+    the Virtual Address as the source.
