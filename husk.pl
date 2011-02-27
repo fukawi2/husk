@@ -1245,6 +1245,8 @@ sub compile_common {
 			unless ($interface{$iface});
 
 		push(@xmas_protection, $iface);
+	} else {
+		&bomb('Unrecognized "common" rule: '.$line);
 	}
 }
 
