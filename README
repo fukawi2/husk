@@ -1,4 +1,5 @@
 husk %VERSION%
+http://www.huskfw.info
 
 husk is a natural language wrapper around the Linux iptables packet filtering.
 It is designed to abstract the sometimes confusing syntax of iptables into
