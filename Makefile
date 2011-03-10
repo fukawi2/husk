@@ -2,6 +2,7 @@ FOOBAR=husk
 D_BIN=/usr/local/sbin
 D_DOC=/usr/local/share/doc/$(FOOBAR)
 D_CNF=/etc/$(FOOBAR)
+D_HELPERS=$(D_CNF)/helpers/
 
 all: bin docs config
 
@@ -17,6 +18,11 @@ docs: ABOUT README rules.conf.simple rules.conf.standalone LICENSE
 	done
 
 config: husk.conf interfaces.conf addr_groups.conf
+	# Install Distribution Helper Rule Files
+	for FILE in icmp.conf samba.conf apple-ios.conf avg.conf dhcp.conf mail.conf dns.conf snmp.conf sql.conf gotomeeting.conf ; do \
+		install -D -m 0444 helpers/$$FILE $(DESTDIR)$(D_HELPERS)/$$FILE ; \
+	done
+	# Install (without overwriting) configuration files
 	for FILE in husk.conf interfaces.conf addr_groups.conf ; do \
 		[[ -e $(DESTDIR)$(D_CNF)/$$FILE ]] || install -D -m 0644 $$FILE $(DESTDIR)$(D_CNF)/$$FILE ; \
 	done

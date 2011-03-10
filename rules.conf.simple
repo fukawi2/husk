@@ -1,4 +1,10 @@
+include helpers/icmp.conf
+include helpers/gotomeeting.conf
+include helpers/samba.conf
+
 define rules LAN to NET
+GOTOMEETING source address 192.168.100.100
+SAMBA destination address cifs.example.com
 accept all	# Allow everything from local network
 end define
 
@@ -6,21 +12,6 @@ define rules LAN to ME
 accept protocol tcp ports ssh,smtp,domain
 accept protocol udp ports ntp,domain
 accept protocol udp ports bootps,bootpc	# Allow clients to DHCP
-end define
-
-define rules ICMP
-# Disable these 3 rules if your box is low on memory
-iptables -A %CHAIN% -m recent --name icmp --set
-iptables -A %CHAIN% -m recent --name icmp --rcheck --seconds 4 --hitcount 8 -j LOG --log-prefix='[ICMP LIMIT] '
-iptables -A %CHAIN% -m recent --name icmp --rcheck --seconds 4 --hitcount 8 -j DROP
-# Use these ICMP rules everywhere
-accept protocol icmp type 0 limit 10/sec burst 15
-accept protocol icmp type 3 limit 10/sec burst 15
-accept protocol icmp type 8 limit 10/sec burst 15
-accept protocol icmp type 11 limit 10/sec burst 15
-accept protocol icmp type 30 limit 10/sec burst 15
-iptables -A %CHAIN% -j LOG --log-prefix='[ICMP GLOBAL LIMIT] '
-drop all protocol icmp
 end define
 
 define rules INPUT
