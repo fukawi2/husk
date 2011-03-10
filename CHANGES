@@ -57,3 +57,11 @@
     source address used for outgoing packets. Useful in configurations where
     HA is used, and there is a 'src' argument to tell the kernel to prefer
     the Virtual Address as the source.
+* ==> Version 0.8.3
+    add distributed helper rulesets
+    
+    these helpers can be used via an 'include' directive in rules.conf to
+    make life easier by predefining commonly used rules.
+    also add example usage to 'rules.cond.simple'
+    added website url to README
+    expanded "in" and "out" keywork regex to support "incoming" and "outgoing" respectively
