@@ -29,7 +29,7 @@ my ($conf_file, $conf_dir, $iptables, $iptables_restore, $udc_prefix, $kw);
 my $script_output;			# Boolean to generate script output or not
 my $curr_chain;				# Name of current chain to append rules to
 my $line_cnt = 0;			# Counter for line number (Needs to be globally scoped to use in multiple subs)
-my $xzone_prefix = 'crs';	# Prefix for Cross-zone chain names
+my $xzone_prefix = 'x';		# Prefix for Cross-zone chain names
 # Arrays and Hashes
 my %interface;			# Interfaces Name to eth Mappings
 my %addr_group;			# Hostgroups from hostgroups.conf
