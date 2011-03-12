@@ -19,7 +19,7 @@ docs: ABOUT README rules.conf.simple rules.conf.standalone LICENSE
 
 config: husk.conf interfaces.conf addr_groups.conf
 	# Install Distribution Helper Rule Files
-	for FILE in icmp.conf samba.conf apple-ios.conf avg.conf dhcp.conf mail.conf dns.conf snmp.conf sql.conf gotomeeting.conf ; do \
+	for FILE in icmp.conf samba.conf apple-ios.conf avg.conf dhcp.conf mail.conf dns.conf snmp.conf sql.conf gotomeeting.conf pptp.conf ; do \
 		install -D -m 0444 helpers/$$FILE $(DESTDIR)$(D_HELPERS)/$$FILE ; \
 	done
 	# Install (without overwriting) configuration files
