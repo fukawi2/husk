@@ -3,6 +3,7 @@
 # server) rather than a box that is functioning as a router with multiple
 # network cards.
 #
+include helpers/icmp.conf
 
 define rules SSH_ALLOWED
 accept source address home.example.com
@@ -15,21 +16,6 @@ accept protocol udp ports ntp,domain
 accept protocol tcp ports smtp,domain
 accept protocol tcp ports http,https
 SSH_ALLOWED protocol tcp port ssh
-end define
-
-define rules ICMP
-# Disable these 3 rules if your box is low on memory
-iptables -A %CHAIN% -m recent --name icmp --set
-iptables -A %CHAIN% -m recent --name icmp --rcheck --seconds 4 --hitcount 8 -j LOG --log-prefix='[ICMP LIMIT] '
-iptables -A %CHAIN% -m recent --name icmp --rcheck --seconds 4 --hitcount 8 -j DROP
-# Use these ICMP rules everywhere
-accept protocol icmp type 0 limit 10/sec burst 15
-accept protocol icmp type 3 limit 10/sec burst 15
-accept protocol icmp type 8 limit 10/sec burst 15
-accept protocol icmp type 11 limit 10/sec burst 15
-accept protocol icmp type 30 limit 10/sec burst 15
-iptables -A %CHAIN% -j LOG --log-prefix='[ICMP GLOBAL LIMIT] '
-drop all protocol icmp
 end define
 
 define rules OUTPUT
