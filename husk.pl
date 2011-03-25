@@ -25,7 +25,7 @@ use Getopt::Long;
 my $VERSION = '%VERSION%';
 
 # runtime vars
-my ($conf_file, $conf_dir, $iptables, $iptables_restore, $udc_prefix, $kw);
+my ($conf_file, $conf_dir, $iptables, $iptables_restore, $ip6tables, $ip6tables_restore, $udc_prefix, $kw, $ipv6);
 my $script_output;			# Boolean to generate script output or not
 my $curr_chain;				# Name of current chain to append rules to
 my $line_cnt = 0;			# Counter for line number (Needs to be globally scoped to use in multiple subs)
@@ -48,9 +48,11 @@ my @syn_protection;		# Array of interfaces to provide NEW NO SYN protection on
 # compile some standard regex patterns
 # any variables starting with "qr_" are precompiled regexes
 my $qr_mac_address	= qr/(([A-F0-9]{2}[:.-]?){6})/io;
-my $qr_hostname		= qr/(([A-Z0-9]|[A-Z0-9][A-Z0-9\-]*[A-Z0-9])\.)*([A-Z]|[A-Z][A-Z0-9\-]*[A-Z0-9])/io;
+my $qr_hostname		= qr/(([A-Z0-9]|[A-Z0-9][A-Z0-9\-]*[A-Z0-9])\.)*([A-Z]|[A-Z][A-Z0-9\-]*[A-Z0-9])\s/io;
 my $qr_ip_address	= qr/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/o;
 my $qr_ip_cidr		= qr/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/([0-9]{1,2}))?/o;
+my $qr_ip6_address	= qr/${\&make_ipv6_regex()}/io;
+my $qr_ip6_cidr		= qr/${\&make_ipv6_regex()}(\/[0-9]{1,3})?/io;
 my $qr_if_names		= qr/((eth|ppp|bond|tun|tap|sit|(xen)?br|vif)(\d+|\+)((\.|:)\d+)?|lo|xen[A-Z]+)/io;
 my $qr_int_name		= qr/\w+/o;
 my $qr_first_word	= qr/\A(\w+)/o;
@@ -114,8 +116,8 @@ $BOGON_SOURCES{'240.0.0.0/4'} = 'Class E Reserved (RFC 1112)';
 my %IPV6_BOGON_SOURCES;
 $IPV6_BOGON_SOURCES{'3fff:ffff::/32'} = 'EXAMPLENET-WF';
 $IPV6_BOGON_SOURCES{'2001:0DB8::/32'} = 'EXAMPLENET-WF';
-$IPV6_BOGON_SOURCES{'fec0/10'} = 'RFC 3879 Site Local Addresses';
-$IPV6_BOGON_SOURCES{'fe80/10'} = 'RFC 3879 Site Local Addresses';
+$IPV6_BOGON_SOURCES{'fec0::/10'} = 'RFC 3879 Site Local Addresses';
+$IPV6_BOGON_SOURCES{'fe80::/10'} = 'RFC 3879 Site Local Addresses';
 
 # Most of these rules gathered from "gotroot.com":
 # 	http://www.gotroot.com/Linux+Firewall+Rules
@@ -142,6 +144,7 @@ my @RESERVED_WORDS = qw(
 
 # Handle command line args
 &handle_cmd_args;
+&set_ipv6_regexes() if $ipv6;
 
 # read config files
 $conf_file = coalesce($conf_file, '/etc/husk/husk.conf');
@@ -460,7 +463,7 @@ sub close_rules {
 		&ipt(sprintf('-t %s -N %s', $BOGON_TABLE, $BOGON_CHAIN));
 
 		# Populate the new chain with rules
-		foreach my $bogon_src (sort(keys %BOGON_SOURCES)) {
+		foreach my $bogon_src (sort($ipv6 ? keys %IPV6_BOGON_SOURCES : keys %BOGON_SOURCES)) {
 			# LOG and DROP bad sources (bogons)
 			log_and_drop(
 				table=>$BOGON_TABLE,
@@ -469,7 +472,7 @@ sub close_rules {
 				criteria=>sprintf(
 					'-s %s -m comment --comment "%s"',
 					$bogon_src,
-					$BOGON_SOURCES{$bogon_src},
+					($ipv6 ? $IPV6_BOGON_SOURCES{$bogon_src} : $BOGON_SOURCES{$bogon_src}),
 			));
 		}
 		# End with a default RETURN
@@ -493,12 +496,13 @@ sub close_rules {
 		&ipt(sprintf('-t %s -N %s', $SPOOF_TABLE, $SPOOF_CHAIN));
 
 		foreach my $iface (keys %spoof_protection) {
+			# TODO what do we do here for dhcpv6 ????
 			# RETURN if the packet is sourced from 0.0.0.0 (eg, DHCP Discover)
 			&ipt(sprintf('-t %s -A %s -i %s -s 0.0.0.0 -p udp --sport 68 --dport 67 -m comment --comment "DHCP Discover bypasses spoof protection" -j RETURN',
 					$SPOOF_TABLE,
 					$SPOOF_CHAIN,
 					$interface{$iface},
-				));
+				)) unless $ipv6;
 
 			# RETURN if the packet is from a known-good source (as specified by user)
 			foreach (@{$spoof_protection{$iface}}) {
@@ -687,7 +691,7 @@ sub generate_output {
 	unless ($script_output) {
 		# Just dump the rules to stdout as plain iptables
 		foreach (@output_rules) {
-			printf("%s %s\n", $iptables, $_);
+			printf("%s %s\n", $ipv6 ? $ip6tables : $iptables, $_);
 		}
 	} else {
 		# iptables-restore script
@@ -971,7 +975,7 @@ sub compile_call {
 				"-m multiport --dports $criteria{'dpts'}"
 				: '',
 			defined($criteria{'icmp_type'})	?
-				"-p icmp --icmp-type $criteria{'icmp_type'}"
+				($ipv6 ? "-p icmpv6 --icmpv6-type $criteria{'icmp_type'}" : "-p icmp --icmp-type $criteria{'icmp_type'}") # yuck
 				: '',
 			defined($criteria{'limit'})		?
 				"-m limit --limit $criteria{'limit'}"
@@ -1143,6 +1147,7 @@ sub compile_common {
 	$line = &cleanup_line($line);
 
 	if ($line =~ m/$qr_CMN_NAT/) {
+		&bomb('NAT not available for IPv6') if ($ipv6);
 		# SNAT traffic out a given interface
 		my $snat_oeth = uc($1);
 		my $snat_chain = sprintf('snat_%s', $snat_oeth);
@@ -1197,7 +1202,7 @@ sub compile_common {
 	elsif ($line =~ m/$qr_CMN_LOOPBACK/) {
 		# loopback accept
 		&ipt(sprintf('-A INPUT -i lo -j ACCEPT -m comment --comment "husk line %s"', $line_cnt));
-		&ipt(sprintf('-A INPUT ! -i lo -s 127.0.0.0/8 -j DROP -m comment --comment "husk line %s"', $line_cnt));
+		&ipt(sprintf('-A INPUT ! -i lo -s %s -j DROP -m comment --comment "husk line %s"', $ipv6 ? "::1/128"  : "127.0.0.0/8", $line_cnt));
 		&ipt(sprintf('-A OUTPUT -o lo -j ACCEPT -m comment --comment "husk line %s"', $line_cnt));
 	}
 	elsif ($line =~ m/$qr_CMN_SYN/) {
@@ -1282,10 +1287,14 @@ sub read_config_file {
 	$conf_dir			= coalesce($config{'default.conf_dir'}, '/etc/husk');
 	$iptables			= coalesce($config{'default.iptables'}, `which iptables`);
 	$iptables_restore	= coalesce($config{'default.iptables-restore'}, `which iptables-restore`);
+	$ip6tables			= coalesce($config{'default.ip6tables'}, `which ip6tables`);
+	$ip6tables_restore	= coalesce($config{'default.ip6tables-restore'}, `which ip6tables-restore`);
 	$udc_prefix			= coalesce($config{'default.udc_prefix'}, 'tgt_');
 	chomp($conf_dir);
 	chomp($iptables);
 	chomp($iptables_restore);
+	chomp($ip6tables);
+	chomp($ip6tables_restore);
 	chomp($udc_prefix);
 
 	# validate config
@@ -1400,12 +1409,13 @@ sub handle_cmd_args {
 	GetOptions(
 		"script"	=> \$script_output,
 		"conf=s"	=> \$conf_file,
+		"ipv6"		=> \$ipv6,
 	) or &usage();
 }
 
 sub init {
 	# wipe everything so we know we are starting fresh
-	foreach my $table qw(filter nat mangle raw) {
+	foreach my $table ($ipv6 ? qw(filter mangle raw) : qw(filter nat mangle raw)) {
 		&ipt("-t $table -F");
 		&ipt("-t $table -X");
 		&ipt("-t $table -Z");
@@ -1625,10 +1635,44 @@ sub timestamp {
 	);
 }
 
+sub set_ipv6_regexes {
+	$qr_kw_src_addr		= qr/\bsource address ($qr_hostname|$qr_ip6_cidr)\b/io;
+	$qr_kw_dst_addr		= qr/\bdest(ination)? address ($qr_hostname|$qr_ip6_cidr)(:(.+))?\b/io;
+	$qr_kw_src_ip		= qr/\bsource address ($qr_ip6_cidr)(:(.+))?\b/io;
+	$qr_kw_dst_ip		= qr/\bdest(ination)? address ($qr_ip6_cidr)(:(.+))?\b/io;
+	$qr_kw_src_range	= qr/\bsource range ($qr_ip6_address) to ($qr_ip6_address)\b/io;
+	$qr_kw_dst_range	= qr/\bdest(ination)? range ($qr_ip6_address) to ($qr_ip6_address)\b/io;
+}
+
+sub make_ipv6_regex {
+	# Taken from CPAN Regexp::IPv6 by Salvador Fandiño García
+	my $IPv4 = "((25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2}))";
+	my $G = "[0-9a-fA-F]{1,4}";
+
+	my @tail = (
+		":",
+		"(:($G)?|$IPv4)",
+		":($IPv4|$G(:$G)?|)",
+		"(:$IPv4|:$G(:$IPv4|(:$G){0,2})|:)",
+		"((:$G){0,2}(:$IPv4|(:$G){1,2})|:)",
+		"((:$G){0,3}(:$IPv4|(:$G){1,2})|:)",
+		"((:$G){0,4}(:$IPv4|(:$G){1,2})|:)" );
+
+	my $IPv6_re = $G;
+	$IPv6_re = "$G:($IPv6_re|$_)" for @tail;
+	$IPv6_re = qq/:(:$G){0,5}((:$G){1,2}|:$IPv4)|$IPv6_re/;
+	$IPv6_re =~ s/\(/(?:/g;
+	#$IPv6_re = qr/$IPv6_re/;
+	return $IPv6_re;
+}
+
 sub usage {
 	print "Usage: husk [options]\n";
 	print "Options:\n";
 	printf "   %-25s %-50s\n", '--script', 'output an iptables script instead of iptables commands';
 	printf "   %-25s %-50s\n", '--conf=/path/to/husk.conf', 'specify an alternate config file';
+	printf "   %-25s %-50s\n", '--ipv6', 'generate ipv6 output';
 	exit 1;
 }
+
+# vim: noexpandtab sw=4 ts=4
