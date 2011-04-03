@@ -48,7 +48,7 @@ my @syn_protection;		# Array of interfaces to provide NEW NO SYN protection on
 # compile some standard regex patterns
 # any variables starting with "qr_" are precompiled regexes
 my $qr_mac_address	= qr/(([A-F0-9]{2}[:.-]?){6})/io;
-my $qr_hostname		= qr/(([A-Z0-9]|[A-Z0-9][A-Z0-9\-]*[A-Z0-9])\.)*([A-Z]|[A-Z][A-Z0-9\-]*[A-Z0-9])\s/io;
+my $qr_hostname		= qr/(([A-Z0-9]|[A-Z0-9][A-Z0-9\-]*[A-Z0-9])\.)*([A-Z]|[A-Z][A-Z0-9\-]*[A-Z0-9])/io;
 my $qr_ip_address	= qr/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/o;
 my $qr_ip_cidr		= qr/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/([0-9]{1,2}))?/o;
 my $qr_ip6_address	= qr/${\&make_ipv6_regex()}/io;
