@@ -86,4 +86,9 @@ if [ "${args[0]}" != '--no-confirm' ] ; then
 	esac
 fi
 
+# Save to init script file if possible
+for init_script in '/etc/init.d/iptables' '/etc/rc.d/iptables' ; do
+	[[ -x "$init_script" ]] && { $init_script save > /dev/null; break; }
+done
+
 exit 0
