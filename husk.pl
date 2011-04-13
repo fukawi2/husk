@@ -670,6 +670,15 @@ sub close_rules {
 }
 
 sub generate_output {
+	# Always print license and disclaimer
+	print "#\n";
+	print "# husk, Copyright (C) 2010-2011 Phillip Smith\n";
+	print "# This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are\n";
+	print "# welcome to use and redistribute it under the conditions of the GPL license version 2\n";
+	print "# See the \"COPYING\" file for further details.\n";
+	print "#\n";
+	printf "# Ruleset compiled %s\n", &timestamp;
+	print "#\n";
 	unless ($script_output) {
 		# Just dump the rules to stdout as plain iptables
 		foreach (@output_rules) {
