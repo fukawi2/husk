@@ -65,3 +65,14 @@
     also add example usage to 'rules.cond.simple'
     added website url to README
     expanded "in" and "out" keywork regex to support "incoming" and "outgoing" respectively
+* ==> Version 0.8.4
+    Merge branch 'master' of github.com:fukawi2/husk
+    always print license and disclaimer at top of output
+    add system init script save command to end of fire script
+    cleanup of fire script
+    fixed typo in sql helper
+    removed ICMP target from standalone example rules (replaced by helper file)
+    added support for custom named xen bridges (eg, xenNET)
+    added pptp helper to Makefile
+    added helper ruleset for pptp
+    use "x" instead of "crs" for cross-zone chain prefix
