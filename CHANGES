@@ -76,3 +76,4 @@
     added pptp helper to Makefile
     added helper ruleset for pptp
     use "x" instead of "crs" for cross-zone chain prefix
+* ==> Version 0.8.4
