@@ -26,12 +26,12 @@ install: test bin docs config
 test:
 	@echo "==> Checking for required external dependencies"
 	for bindep in $(DEP_BINS) ; do \
-		which $$bindep > /dev/null ; \
+		which $$bindep > /dev/null || exit 1 ; \
 	done
 
 	@echo "==> Checking for required perl modules"
 	for pmod in $(DEP_PMODS) ; do \
-		perl -M$$pmod -e 1 ; \
+		perl -M$$pmod -e 1 || exit 1 ; \
 	done
 	@echo "==> It all looks good Captain!"
 
