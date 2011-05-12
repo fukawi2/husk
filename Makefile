@@ -9,7 +9,7 @@ DEP_PMODS=File::Basename Config::Simple Config::IniFiles Getopt::Long
 D_BIN=/usr/local/sbin
 D_DOC=/usr/local/share/doc/$(PROJECT)
 D_CNF=/etc/$(PROJECT)
-D_HELPERS=$(D_CNF)/helpers/
+D_HELPERS=$(D_CNF)/helpers
 
 ### Lists of files to be installed
 F_CONF=husk.conf interfaces.conf addr_groups.conf
@@ -41,13 +41,13 @@ bin: test $(PROJECT).pl fire.sh
 
 docs: $(F_DOCS)
 	for f in $(F_DOCS) ; do \
-		install -D -m 0644 $$f $(DESTDIR)$(D_DOC)/$$f ; \
+		install -D -m 0644 $$f $(DESTDIR)$(D_DOC)/$$f || exit 1 ; \
 	done
 
-config: $(F_CONF) $(F_HELPERS)
+config: $(F_CONF)
 	# Install Distribution Helper Rule Files
-	for f in $(HELPERS) ; do \
-		install -D -m 0444 helpers/$$f $(DESTDIR)$(D_HELPERS)/$$f ; \
+	for f in $(F_HELPERS) ; do \
+		install -D -m 0444 helpers/$$f $(DESTDIR)$(D_HELPERS)/$$f || exit 1 ; \
 	done
 	# Install (without overwriting) configuration files
 	for f in $(F_CONF) ; do \
