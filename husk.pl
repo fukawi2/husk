@@ -77,14 +77,17 @@ my $qr_end_define	= qr/\Aend\s+define\b?\z/io;
 my $qr_kw_protocol	= qr/\bproto(col)? ([\w]+)\b/io;
 my $qr_kw_in_int	= qr/\bin(coming)? ($qr_int_name)\b/io;
 my $qr_kw_out_int	= qr/\bout(going)? ($qr_int_name)\b/io;
-my $qr_kw_src_addr_ipv4	= qr/\bsource address ($qr_hostname|$qr_ip4_cidr)\b/io;
-my $qr_kw_dst_addr_ipv4	= qr/\bdest(ination)? address ($qr_hostname|$qr_ip4_cidr)(:(.+))?\b/io;
-my $qr_kw_src_ip4	= qr/\bsource address ($qr_ip4_cidr)(:(.+))?\b/io;
-my $qr_kw_dst_ip4	= qr/\bdest(ination)? address ($qr_ip4_cidr)(:(.+))?\b/io;
+# Note that ORDER is IMPORTANT in these 2 regexes because an IPv6 *address*
+# looks very similar to a hostname (as far as our regexes are concerned) so
+# we need to try and match the IPv6 address before trying to make our
+# 'hostname' regex pattern otherwise we treat an IPv6 address as a hostname
+# IOW: make sure the IPv6 regex is tested before the hostname regex.
+my $qr_kw_src_addr	= qr/\bsource address ($qr_ip4_cidr|$qr_ip6_cidr|$qr_hostname)\b/io;
+my $qr_kw_dst_addr	= qr/\bdest(ination)? address ($qr_ip4_cidr|$qr_ip6_cidr|$qr_hostname)\b/io;
 my $qr_kw_src_host	= qr/\bsource group (\S+)\b/io;
 my $qr_kw_dst_host	= qr/\bdest(ination)? group (\S+)\b/io;
-my $qr_kw_src_range	= qr/\bsource range ($qr_ip4_address) to ($qr_ip4_address)\b/io;
-my $qr_kw_dst_range	= qr/\bdest(ination)? range ($qr_ip4_address) to ($qr_ip4_address)\b/io;
+my $qr_kw_src_range	= qr/\bsource range ($qr_ip4_address|$qr_ip6_address) to ($qr_ip4_address|$qr_ip6_address)\b/io;
+my $qr_kw_dst_range	= qr/\bdest(ination)? range ($qr_ip4_address|$qr_ip6_address) to ($qr_ip4_address|$qr_ip6_address)\b/io;
 my $qr_port_pattern	= qr/(\d|\w|-)+/io;
 my $qr_kw_sport		= qr/\bsource\s+port\s+(($qr_port_pattern:?)+)\b/io;
 my $qr_kw_dport		= qr/\b(dest(ination)?)?\s*port (($qr_port_pattern:?)+)\b/io;
@@ -900,11 +903,6 @@ sub compile_call {
 	my $chain	= coalesce($args{'chain'}, '');
 	my $rule	= coalesce($args{'line'}, '');
 
-	# These are just default values; they could be changed later on depending
-	# what we find in the rule.
-	my $rule_is_ipv4 = $do_ipv4;
-	my $rule_is_ipv6 = $do_ipv6;
-	
 	# Keep the rule intact in this var for user display if reqd for errors
 	my $complete_rule = $rule;
 
@@ -926,8 +924,8 @@ sub compile_call {
 		return 1;
 	}
 	
-	# Hash to store all the individual parts of this rule
-	my %criteria;
+	my %criteria;		# Hash to store all the individual parts of this rule
+	my @addrs_to_check;	# Addresses that need to be tested for IPv4/IPv6
 
 	# Extract the individual parts of the rule into our hash
 	if ($rule =~ s/$qr_tgt_builtins//s) {
@@ -943,18 +941,26 @@ sub compile_call {
 		{$criteria{'i_name'} = $interface{uc($2)}};
 	if ($rule =~ s/$qr_kw_out_int//s)
 		{$criteria{'o_name'} = $interface{uc($2)}};
-	if ($rule =~ s/$qr_kw_src_addr_ipv4//s)
-		{$criteria{'src'} = lc($1)};
-	if ($rule =~ s/$qr_kw_dst_addr_ipv4//s)
-		{$criteria{'dst'} = lc($2)};
+	if ($rule =~ s/$qr_kw_src_addr//s) {
+		push(@addrs_to_check, $1);
+		$criteria{'src'} = lc($1)};
+	if ($rule =~ s/$qr_kw_dst_addr//s) {
+		push(@addrs_to_check, $2);
+		$criteria{'dst'} = lc($2)};
 	if ($rule =~ s/$qr_kw_src_host//s)
 		{$criteria{'sgroup'} = $1};
 	if ($rule =~ s/$qr_kw_dst_host//s)
 		{$criteria{'dgroup'} = $2};
-	if ($rule =~ s/$qr_kw_src_range//s)
-		{$criteria{'srcrange'} = "$1-$2"};
-	if ($rule =~ s/$qr_kw_dst_range//s)
-		{$criteria{'dstrange'} = "$2-$3"};
+	if ($rule =~ s/$qr_kw_src_range//s) {
+		my ($from, $to) = ($1, $2);
+		push(@addrs_to_check, $from);
+		push(@addrs_to_check, $to);
+		$criteria{'srcrange'} = "$from-$to"};
+	if ($rule =~ s/$qr_kw_dst_range//s) {
+		my ($from, $to) = ($2, $3);
+		push(@addrs_to_check, $from);
+		push(@addrs_to_check, $to);
+		$criteria{'dstrange'} = "$from-$to"};
 	if ($rule =~ s/$qr_kw_sport//s) {
 		my $port = lc($1);
 		$criteria{'spt'} = $port;
@@ -1044,9 +1050,37 @@ sub compile_call {
 		}
 	} else {
 		# otherwise, build the rule into an iptables command
-		# TODO: Check hostnames for IPv4 and IPv6 addresses
 
+		# make a decision if the rule is IPv4, IPv6 or Both
+		my $rule_is_ipv4 = $do_ipv4;
+		my $rule_is_ipv6 = $do_ipv6;
+		# this next section is kinda messy, but it seems to work... Get things
+		# working first, then worry about making them pretty.
+		if ($do_ipv4) {
+			# check for explicit and implicit (via DNS lookup) IPv4 addresses
+			for my $addr (@addrs_to_check) {
+				$rule_is_ipv4 = 0;
+				$rule_is_ipv4 = 1 if ($addr =~ m/$qr_ip4_cidr(:(.+))?\b/);
+				# avoid doing dns lookup if we've already determined that this
+				# rule requires IPv4
+				unless ($rule_is_ipv4) {
+					$rule_is_ipv4 = 1 if (&host_is_ipv4($addr));
+				}
+			}
+		}
+		if ($do_ipv6) {
+			for my $addr (@addrs_to_check) {
+				$rule_is_ipv6 = 0;
+				$rule_is_ipv6 = 1 if ($addr =~ m/$qr_ip6_cidr(:(.+))?\b/);
+				unless ($rule_is_ipv6) {
+					$rule_is_ipv6 = 1 if (&host_is_ipv6($addr));
+				}
+			}
+		}
 
+		# this use of &collapse_spaces, gratutious sprintf and ternary tests
+		# makes me feel dirty like a mud-wrestling nymphomanic but it works.
+		# I'm open to suggestions for how to make it more elegant.
 		my $ipt_rule = collapse_spaces(
 			sprintf('-A %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s -m comment --comment "husk line %s"',
 			$chain,
@@ -1127,7 +1161,7 @@ sub compile_nat {
 		{$criteria{'in'}	= uc($2)}
 	if ($rule =~ s/$qr_kw_protocol//s)
 		{$criteria{'proto'}	= lc($2)}
-	if ($rule =~ s/$qr_kw_dst_ip4//s)
+	if ($rule =~ s/$qr_kw_dst_addr//s)
 		{$criteria{'inet_ext'}	= lc($2)}
 	if ($rule =~ s/$qr_kw_sport//s) {
 		my $port = lc($1);
@@ -1202,7 +1236,7 @@ sub compile_interception {
 		{$criteria{'in'}	= uc($2)}
 	if ($rule =~ s/$qr_kw_protocol//s)
 		{$criteria{'proto'}	= lc($2)}
-	if ($rule =~ s/$qr_kw_dst_addr_ipv4//s)
+	if ($rule =~ s/$qr_kw_dst_addr//s)
 		{$criteria{'inet_ext'}	= lc($2)}
 	if ($rule =~ s/$qr_kw_sport//s) {
 		my $port = lc($1);
@@ -1575,7 +1609,7 @@ sub include_file {
 
 	# Restore our details
 	$line_cnt = $orig_line_count;
-	$current_rules_file = $current_rules_file;
+	$current_rules_file = $orig_fname;
 }
 
 sub unknown_keyword {
@@ -1775,15 +1809,6 @@ sub timestamp {
 ###############################################################################
 #### IPv6 HELPERS
 ###############################################################################
-sub set_ipv6_regexes {
-	$qr_kw_src_addr_ipv4		= qr/\bsource address ($qr_hostname|$qr_ip6_cidr)\b/io;
-	$qr_kw_dst_addr_ipv4		= qr/\bdest(ination)? address ($qr_hostname|$qr_ip6_cidr)(:(.+))?\b/io;
-	$qr_kw_src_ip4		= qr/\bsource address ($qr_ip6_cidr)(:(.+))?\b/io;
-	$qr_kw_dst_ip4		= qr/\bdest(ination)? address ($qr_ip6_cidr)(:(.+))?\b/io;
-	$qr_kw_src_range	= qr/\bsource range ($qr_ip6_address) to ($qr_ip6_address)\b/io;
-	$qr_kw_dst_range	= qr/\bdest(ination)? range ($qr_ip6_address) to ($qr_ip6_address)\b/io;
-}
-
 sub make_ipv6_regex {
 	# Taken from CPAN Regexp::IPv6 by Salvador Fandiño García
 	my $IPv4 = "((25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2}))";
