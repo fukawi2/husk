@@ -21,6 +21,7 @@ use strict;
 use Config::Simple;		# To parse husk.conf
 use Config::IniFiles;	# To parse here documents in hostgroups.conf
 use Getopt::Long;
+use Net::DNS;
 
 my $VERSION = '%VERSION%';
 
@@ -1664,6 +1665,42 @@ sub make_ipv6_regex {
 	$IPv6_re =~ s/\(/(?:/g;
 	#$IPv6_re = qr/$IPv6_re/;
 	return $IPv6_re;
+}
+
+sub resolve_dns() {
+	my ($host, $rr_type) = @_;
+
+	my $resolv = Net::DNS::Resolver->new(
+		searchlist	=> (),
+		recurse		=> 0,
+		debug		=> 1,
+		defnames	=> 0,
+	);
+
+	# Errors (if any) are in $resolv->errorstring
+	my $dns_packet	= $resolv->query($host, $rr_type);
+	if ($dns_packet) {
+		my @return_ips;
+
+		foreach my $rr ($dns_packet->answer) {
+			next unless ($rr->type eq $rr_type);
+			push(@return_ips, $rr->address);
+		}
+		return @return_ips;
+	}
+
+	# Nothing found
+	return;
+}
+
+sub host_is_ipv4() {
+	my ($host) = @_;
+	return &resolve_dns($host, 'A');
+}
+
+sub host_is_ipv6() {
+	my ($host) = @_;
+	return &resolve_dns($host, 'AAAA');
 }
 
 sub usage {
