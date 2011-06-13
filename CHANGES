@@ -76,3 +76,23 @@
     added pptp helper to Makefile
     added helper ruleset for pptp
     use "x" instead of "crs" for cross-zone chain prefix
+* ==> Version 0.9.0
+added ipv6 bogons
+Add IPv6 support.
+fix qr_hostname regex broken by previous patch
+fixed duplication in CHANGES
+rework the Makefile
+test the status of all make tests, not just the last one
+Makefile: file helper installation
+additional port required for kerberos in active directory helper
+fixed error in "outgoing" regex
+added ipv6 bogons
+Add IPv6 support.
+fix qr_hostname regex broken by previous patch
+added functions to determine if host is ipv4 and/or ipv6 (ie, A or AAAA records)
+fixed merge
+major cleanup and addition of ipv6 handling
+more major ipv6 additions
+more sanity checking of ipv6/ipv4 rules
+removed debug lines
+added options for ipv6
