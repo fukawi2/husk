@@ -1056,27 +1056,27 @@ sub compile_call {
 		my $rule_is_ipv6 = $do_ipv6;
 		# this next section is kinda messy, but it seems to work... Get things
 		# working first, then worry about making them pretty.
-		if ($do_ipv4) {
-			# check for explicit and implicit (via DNS lookup) IPv4 addresses
-			for my $addr (@addrs_to_check) {
-				$rule_is_ipv4 = 0;
-				$rule_is_ipv4 = 1 if ($addr =~ m/$qr_ip4_cidr(:(.+))?\b/);
-				# avoid doing dns lookup if we've already determined that this
-				# rule requires IPv4
-				unless ($rule_is_ipv4) {
-					$rule_is_ipv4 = 1 if (&host_is_ipv4($addr));
-				}
+		for my $addr (@addrs_to_check) {
+			$rule_is_ipv4 = 0;
+			$rule_is_ipv4 = 1 if ($addr =~ m/$qr_ip4_cidr(:(.+))?\b/);
+			# avoid doing dns lookup if we've already determined that this
+			# rule requires IPv4
+			unless ($rule_is_ipv4) {
+				$rule_is_ipv4 = 1 if (&host_is_ipv4($addr));
 			}
+			&dbg('Address ['.$addr.'] requires IPv4: '.$rule_is_ipv4);
 		}
-		if ($do_ipv6) {
-			for my $addr (@addrs_to_check) {
-				$rule_is_ipv6 = 0;
-				$rule_is_ipv6 = 1 if ($addr =~ m/$qr_ip6_cidr(:(.+))?\b/);
-				unless ($rule_is_ipv6) {
-					$rule_is_ipv6 = 1 if (&host_is_ipv6($addr));
-				}
+		for my $addr (@addrs_to_check) {
+			$rule_is_ipv6 = 0;
+			$rule_is_ipv6 = 1 if ($addr =~ m/$qr_ip6_cidr(:(.+))?\b/);
+			unless ($rule_is_ipv6) {
+				$rule_is_ipv6 = 1 if (&host_is_ipv6($addr));
 			}
+			&dbg('Address ['.$addr.'] requires IPv6: '.$rule_is_ipv6);
 		}
+		# check for sanity (as if thats even possible)
+		if ($rule_is_ipv4 and ! $do_ipv4 and ! $rule_is_ipv6) { &bomb('Rule requires IPv4 but IPv4 is disabled') }
+		if ($rule_is_ipv6 and ! $do_ipv6 and ! $rule_is_ipv4) { &bomb('Rule requires IPv6 but IPv6 is disabled') }
 
 		# this use of &collapse_spaces, gratutious sprintf and ternary tests
 		# makes me feel dirty like a mud-wrestling nymphomanic but it works.
@@ -1862,13 +1862,11 @@ sub resolve_dns() {
 
 sub host_is_ipv4() {
 	my ($host) = @_;
-	return unless ($do_ipv4);
 	return &resolve_dns($host, 'A');
 }
 
 sub host_is_ipv6() {
 	my ($host) = @_;
-	return unless ($do_ipv6);
 	return &resolve_dns($host, 'AAAA');
 }
 
