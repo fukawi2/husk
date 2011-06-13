@@ -1064,7 +1064,6 @@ sub compile_call {
 			unless ($rule_is_ipv4) {
 				$rule_is_ipv4 = 1 if (&host_is_ipv4($addr));
 			}
-			&dbg('Address ['.$addr.'] requires IPv4: '.$rule_is_ipv4);
 		}
 		for my $addr (@addrs_to_check) {
 			$rule_is_ipv6 = 0;
@@ -1072,7 +1071,6 @@ sub compile_call {
 			unless ($rule_is_ipv6) {
 				$rule_is_ipv6 = 1 if (&host_is_ipv6($addr));
 			}
-			&dbg('Address ['.$addr.'] requires IPv6: '.$rule_is_ipv6);
 		}
 		# check for sanity (as if thats even possible)
 		if ($rule_is_ipv4 and ! $do_ipv4 and ! $rule_is_ipv6) { &bomb('Rule requires IPv4 but IPv4 is disabled') }
