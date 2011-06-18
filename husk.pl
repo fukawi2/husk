@@ -1446,7 +1446,7 @@ sub read_config_file {
 	$do_ipv6			= coalesce($config{'default.ipv6'}, 				0);
 	chomp($conf_dir);
 	chomp($iptables)			if ($iptables);
-	chomp($iptables_restore		if ($iptables_restore));
+	chomp($iptables_restore)	if ($iptables_restore);
 	chomp($ip6tables)			if ($ip6tables);
 	chomp($ip6tables_restore)	if ($ip6tables_restore);
 	chomp($udc_prefix);
