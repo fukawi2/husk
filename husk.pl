@@ -309,7 +309,7 @@ sub read_rules_file {
 					unless ($do_ipv4);
 
 			$raw_rule =~ s/%CHAIN%/$curr_chain/;
-			$raw_rule = sprintf('%s -m comment --comment "husk line %s"', $line, $line_cnt);
+			$raw_rule = sprintf('%s -m comment --comment "husk line %s"', $raw_rule, $line_cnt);
 			&ipt4($raw_rule);
 		}
 		elsif ($line =~ s/$qr_tgt_ip6tables//) {
@@ -321,7 +321,7 @@ sub read_rules_file {
 					unless ($do_ipv6);
 
 			$raw_rule =~ s/%CHAIN%/$curr_chain/;
-			$raw_rule = sprintf('%s -m comment --comment "husk line %s"', $line, $line_cnt);
+			$raw_rule = sprintf('%s -m comment --comment "husk line %s"', $raw_rule, $line_cnt);
 			&ipt6($raw_rule);
 		}
 		elsif ($line =~ m/$qr_tgt_include/) {
