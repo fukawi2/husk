@@ -155,7 +155,6 @@ my @RESERVED_WORDS = qw(
 
 # Handle command line args
 &handle_cmd_args;
-&set_ipv6_regexes() if $do_ipv6;
 
 # read config files
 $conf_file = coalesce($conf_file, '/etc/husk/husk.conf');
