@@ -1015,7 +1015,7 @@ sub compile_call {
 		# this use of &collapse_spaces, gratutious sprintf and ternary tests
 		# makes me feel dirty like a mud-wrestling nymphomanic but it works.
 		# I'm open to suggestions for how to make it more elegant.
-		my $ipt_rule = collapse_spaces(
+		my $ipt_rule = &collapse_spaces(
 			sprintf('-A %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s -m comment --comment "husk line %s"',
 			$chain,
 			defined($criteria{'target'})	?
