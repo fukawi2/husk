@@ -990,19 +990,23 @@ sub compile_call {
 		# working first, then worry about making them pretty.
 		for my $addr (@addrs_to_check) {
 			$rule_is_ipv4 = 0;
-			$rule_is_ipv4 = 1 if ($addr =~ m/$qr_ip4_cidr(:(.+))?\b/);
-			# avoid doing dns lookup if we've already determined that this
-			# rule requires IPv4
-			unless ($rule_is_ipv4) {
-				$rule_is_ipv4 = 1 if (&host_is_ipv4($addr));
-			}
-		}
-		for my $addr (@addrs_to_check) {
 			$rule_is_ipv6 = 0;
-			$rule_is_ipv6 = 1 if ($addr =~ m/$qr_ip6_cidr(:(.+))?\b/);
-			unless ($rule_is_ipv6) {
-				$rule_is_ipv6 = 1 if (&host_is_ipv6($addr));
+
+			# See if the address is an IP Address first (to avoid unnessicary dns lookups)
+			if ($addr =~ m/$qr_ip4_cidr(:(.+))?\b/) {
+				$rule_is_ipv4 = 1;
+				next;
 			}
+			if ($addr =~ m/$qr_ip6_cidr(:(.+))?\b/) {
+				$rule_is_ipv6 = 1;
+				next;
+			}
+
+			# If we get here, the address hasn't matches the IPv4 or IPv6
+			# regex patterns, so we have to assume it's a hostname that needs
+			# to be converted to IP Address via DNS.
+			$rule_is_ipv4 = 1 if (&host_is_ipv4($addr));
+			$rule_is_ipv6 = 1 if (&host_is_ipv6($addr));
 		}
 		# check for sanity (as if thats even possible)
 		if ($rule_is_ipv4 and ! $do_ipv4 and ! $rule_is_ipv6) { &bomb('Rule requires IPv4 but IPv4 is disabled') }
