@@ -144,9 +144,8 @@ $PORTSCAN_RULES{'-p tcp --tcp-flags ALL NONE'}			= 'PORTSCAN: NMAP Null Scan';
 
 # An array of reserved words that can't be used as target names
 my @RESERVED_WORDS = qw(
-	accept		drop		log
-	redirect	trap		map
-	common		iptables	include
+	accept		drop		log			redirect	trap
+	map			common		iptables	ip6tables	include
 );
 
 ###############################################################################
