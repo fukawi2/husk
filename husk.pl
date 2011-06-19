@@ -109,26 +109,44 @@ my $qr_call_me		= qr/_ME(_|\b)/o;
 my $qr_variable		= qr/\%(\w+)/io;
 
 # Constants
-my %BOGON_SOURCES = (
-	'10.0.0.0/8'		=> 'Private (RFC 1918)',
-	'172.16.0.0/12'		=> 'Private (RFC 1918)',
-	'192.168.0.0/16'	=> 'Private (RFC 1918)',
-	'169.254.0.0/16'	=> 'Link Local (RFC 3927)',
-	'127.0.0.0/8'		=> 'Loopback (RFC 1122)',
-	'255.255.255.255'	=> 'Broadcast (RFC 919)',
-	'192.0.2.0/24'		=> 'TEST-NET - IANA (RFC 1166)',
+my %IPV4_BOGON_SOURCES = (
+	'10.0.0.0/8'		=> 'Private (RFC-1918)',
+	'172.16.0.0/12'		=> 'Private (RFC-1918)',
+	'192.168.0.0/16'	=> 'Private (RFC-1918)',
+	'169.254.0.0/16'	=> 'Link Local (RFC-3927)',
+	'127.0.0.0/8'		=> 'Loopback (RFC-1122)',
+	'255.255.255.255'	=> 'Broadcast (RFC-919)',
+	'192.0.2.0/24'		=> 'TEST-NET - IANA (RFC-1166)',
 	'198.51.100.0/24'	=> 'TEST-NET-2 - IANA',
-	'203.0.113.0/24'	=> 'TEST-NET-3 - APNIC (RFC 5737)',
-	'192.0.0.0/24'		=> 'IETF Protocol Assignment (RFC 5736)',
-	'198.18.0.0/15'		=> 'Benchmark Testing (RFC 2544)',
-	'240.0.0.0/4'		=> 'Class E Reserved (RFC 1112)',
+	'203.0.113.0/24'	=> 'TEST-NET-3 - APNIC (RFC-5737)',
+	'192.0.0.0/24'		=> 'IETF Protocol Assignment (RFC-5736)',
+	'198.18.0.0/15'		=> 'Benchmark Testing (RFC-2544)',
+	'240.0.0.0/4'		=> 'Class E Reserved (RFC-1112)',
 );
-
-my %IPV6_BOGON_SOURCES;
-$IPV6_BOGON_SOURCES{'3fff:ffff::/32'} = 'EXAMPLENET-WF';
-$IPV6_BOGON_SOURCES{'2001:0DB8::/32'} = 'EXAMPLENET-WF';
-$IPV6_BOGON_SOURCES{'fec0::/10'} = 'RFC 3879 Site Local Addresses';
-$IPV6_BOGON_SOURCES{'fe80::/10'} = 'RFC 3879 Site Local Addresses';
+# Most of these IPv6 bogons are sourced from:
+# http://6session.wordpress.com/2009/04/08/ipv6-martian-and-bogon-filters/
+my %IPV6_BOGON_SOURCES = (
+	'3fff:ffff::/32'	=> 'EXAMPLENET-WF',
+	'2001:0DB8::/32'	=> 'EXAMPLENET-WF',
+	'fec0::/10'			=> 'Site Local Addresses (RFC-3879)',
+	'fe80::/10'			=> 'Site Local Addresses (RFC-3879)',
+	'::/96'				=> 'Deprecated (RFC-4291)',
+	'::/128'			=> 'Unspecified address',
+	'::1/128'			=> 'Loopback',
+	'::ffff:0.0.0.0/96'	=> 'IPv4-mapped addresses',
+	'0000::/8'			=> 'Embedded IPv4 addresses',
+	'0200::/7'			=> 'RFC-4548/RFC-4048',
+	'2001:db8::/32'		=> 'IANA Reserved',
+	'2002:0000::/24'	=> '6to4; IPv4 default',
+	'2002:0a00::/24'	=> '6to4; IPv4 RFC-1918',
+	'2002:7f00::/24'	=> '6to4; IPv4 loopback',
+	'2002:ac10::/28'	=> '6to4; IPv4 RFC-1918',
+	'2002:c0a8::/32'	=> '6to4; IPv4 RFC-1918',
+	'2002:e000::/20'	=> '6to4; IPv4 multicast',
+	'2002:ff00::/24'	=> '6to4',
+	'3ffe::/16'			=> 'Former 6bone',
+	'fc00::/7'			=> 'RFC-4193',
+);
 
 # Most of these rules gathered from "gotroot.com":
 # 	http://www.gotroot.com/Linux+Firewall+Rules
@@ -503,7 +521,7 @@ sub close_rules {
 
 		# Populate the new chain with rules
 		if ($do_ipv4) {
-			foreach my $bogon_src (keys %BOGON_SOURCES) {
+			foreach my $bogon_src (keys %IPV4_BOGON_SOURCES) {
 				# LOG and DROP bad sources (bogons)
 				log_and_drop(
 					table=>		$BOGON_TABLE,
@@ -514,7 +532,7 @@ sub close_rules {
 					criteria=>	sprintf(
 						'-s %s -m comment --comment "%s"',
 						$bogon_src,
-						$BOGON_SOURCES{$bogon_src},
+						$IPV4_BOGON_SOURCES{$bogon_src},
 				));
 			}
 			# End with a default RETURN
@@ -813,14 +831,26 @@ sub log_and_drop {
 	# Validate what was passed
 	&bomb((caller(0))[3] . ' called without passing $chain') unless $chain;
 
-	# LOG the packet
-	&ipt(&collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
-			$table, $chain, $criteria, $log_prefix,
-		)));
-	# DROP the packet
-	&ipt(&collapse_spaces(sprintf('%s -A %s %s -j DROP',
-			$table, $chain, $criteria,
-		)));
+	if ($ipv4) {
+		# LOG the packet
+		&ipt4(&collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
+				$table, $chain, $criteria, $log_prefix,
+			)));
+		# DROP the packet
+		&ipt4(&collapse_spaces(sprintf('%s -A %s %s -j DROP',
+				$table, $chain, $criteria,
+			)));
+	}
+	if ($ipv6) {
+		# LOG the packet
+		&ipt6(&collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
+				$table, $chain, $criteria, $log_prefix,
+			)));
+		# DROP the packet
+		&ipt6(&collapse_spaces(sprintf('%s -A %s %s -j DROP',
+				$table, $chain, $criteria,
+			)));
+	}
 
 	return;
 }
