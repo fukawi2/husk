@@ -970,25 +970,24 @@ sub compile_call {
 
 	# aggregate criteria that is part of a single module to one output reference
 	# in the output rule
-	$criteria{'time'} = collapse_spaces(sprintf('%s %s %s',
-			defined($criteria{'time_start'})		?
-				"--timestart $criteria{'time_start'}"
-				: '',
-			defined($criteria{'time_finish'})		?
-				"--timestop $criteria{'time_finish'}"
-				: '',
-			defined($criteria{'time_days'})		?
-				"--weekdays $criteria{'time_days'}"
-				: '',
-			));
-	$criteria{'statistic'} = collapse_spaces(sprintf('%s %s ',
-			defined($criteria{'statistics_every'})		?
-				"-m statistic --mode nth --every $criteria{'statistics_every'}"
-				: '',
-			defined($criteria{'statistics_offset'})		?
-				"--packet $criteria{'statistics_offset'}"
-				: '',
-			));
+	if (defined($criteria{'time_start'})) {
+		$criteria{'time'} .= "--timestart $criteria{'time_start'}"
+	}
+	if (defined($criteria{'time_finish'})) {
+		$criteria{'time'} .= "--timestop $criteria{'time_finish'}"
+	}
+	if (defined($criteria{'time_days'})) {
+		$criteria{'time'} .= "--weekdays $criteria{'time_days'}"
+	}
+	if (defined($criteria{'statistics_every'})) {
+		$criteria{'statistic'} .= "-m statistic --mode nth --every $criteria{'statistics_every'}";
+	}
+	if (defined($criteria{'statistics_offset'})) {
+		$criteria{'statistic'} .= "--packet $criteria{'statistics_offset'}"
+	}
+	if (defined($criteria{'limit'}) and defined($criteria{'burst'})) {
+		$criteria{'limit'} .= " --limit-burst $criteria{'burst'}"
+	}
 
 	# make sure we've understood everything on the line, otherwise BARF!
 	&unknown_keyword(rule=>$rule, complete_rule=>$complete_rule)
