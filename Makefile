@@ -31,6 +31,7 @@ install: test bin docs config
 		install -D -m 0644 $$f $(DESTDIR)$(D_DOC)/$$f || exit 1 ; \
 	done
 	install -Dm0644 husk.1.man $(DESTDIR)$(D_MAN)/man1/husk.1p
+	install -Dm0644 fire.1.man $(DESTDIR)$(D_MAN)/man1/fire.1p
 
 test:
 	@echo "==> Checking for required external dependencies"
@@ -53,6 +54,7 @@ bin: test $(PROJECT).pl fire.sh
 
 docs: $(F_DOCS)
 	pod2man --name=husk husk.pl husk.1.man
+	pod2man --name=fire fire.pod fire.1.man
 
 config: $(F_CONF)
 	# Install Distribution Helper Rule Files

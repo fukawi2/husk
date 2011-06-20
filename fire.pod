@@ -1,0 +1,59 @@
+=head1 NAME
+
+fire - wrapper to assist applying husk compiled rules
+
+=head1 SYNOPSIS
+
+fire [OPTIONS]
+
+Brief description of default behavior here.
+
+=head1 DESCRIPTION
+
+Description here.
+
+=head1 OPTIONS
+
+=over 4
+
+=item --no-confirm
+
+Don't ask for confirmation that the new ruleset applied successfully.
+B<DON'T MAKE A HABIT OF USING THIS!>
+
+=back
+
+=head1 BUGS
+
+=head2 Reporting Bugs
+
+Email bug reports to <fukawi2@gmail.com>
+
+=head2 Known Bugs
+
+Probably some...
+
+=head1 ACKNOWLEDGEMENTS
+
+Part of this script is based on the I<iptables-apply> script written by
+Martin F. Krafft <madduck@madduck.net> and distributed under the Artistic
+Licence 2.0
+
+=head1 LICENSE
+
+Copyright 2010-2011 Phillip Smith
+
+Made available under the conditions of the GPLv2. This is free software; refer
+to the F<LICENSE> file for details.
+
+=head1 AVAILABILITY
+
+<http://www.huskfw.info/>
+
+<http://github.com/fukawi2/husk/>
+
+=head1 AUTHOR
+
+Phillip Smith aka fukawi2
+
+=cut

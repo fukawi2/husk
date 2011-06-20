@@ -1951,14 +1951,14 @@ Probably some...
 
 =head1 ACKNOWLEDGEMENTS
 
-Thanls to Mike Sampson for his assistance in adding and testing IPv6 support.
+Thanks to Mike Sampson for his assistance in adding and testing IPv6 support.
 
 =head1 LICENSE
 
 Copyright 2010-2011 Phillip Smith
 
 Made available under the conditions of the GPLv2. This is free software; refer
-to the COPYING file for details.
+to the F<LICENSE> file for details.
 
 =head1 AVAILABILITY
 
