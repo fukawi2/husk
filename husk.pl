@@ -1041,63 +1041,28 @@ sub compile_call {
 		if ($rule_is_ipv4 and ! $do_ipv4 and ! $rule_is_ipv6) { &bomb('Rule requires IPv4 but IPv4 is disabled') }
 		if ($rule_is_ipv6 and ! $do_ipv6 and ! $rule_is_ipv4) { &bomb('Rule requires IPv6 but IPv6 is disabled') }
 
-		# this use of &collapse_spaces, gratutious sprintf and ternary tests
-		# makes me feel dirty like a mud-wrestling nymphomanic but it works.
-		# I'm open to suggestions for how to make it more elegant.
-		my $ipt_rule = &collapse_spaces(
-			sprintf('-A %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s -m comment --comment "husk line %s"',
-			$chain,
-			defined($criteria{'target'})	?
-				"-j $criteria{'target'}"	: '',
-			defined($criteria{'proto'})		?
-				"-p $criteria{'proto'}"		: '',
-			defined($criteria{'src'})		?
-				"-s $criteria{'src'}"		: '',
-			defined($criteria{'dst'})		?
-				"-d $criteria{'dst'}"		: '',
-			defined($criteria{'i_name'})	?
-				"-i $criteria{'i_name'}"	: '',
-			defined($criteria{'o_name'})	?
-				"-o $criteria{'o_name'}"	: '',
-			defined($criteria{'spt'})		?
-				"--sport $criteria{'spt'}"	: '',
-			defined($criteria{'spts'})		?
-				"-m multiport --sports $criteria{'spts'}"
-				: '',
-			defined($criteria{'dpt'})		?
-				"--dport $criteria{'dpt'}"	: '',
-			defined($criteria{'dpts'})		?
-				"-m multiport --dports $criteria{'dpts'}"
-				: '',
-			defined($criteria{'icmp_type'})	?
-				"-p icmp --icmp-type $criteria{'icmp_type'}"
-				: '',
-			defined($criteria{'limit'})		?
-				"-m limit --limit $criteria{'limit'}"
-				: '',
-			defined($criteria{'burst'})		?
-				"--limit-burst $criteria{'burst'}"
-				: '',
-			$criteria{'time'}		?
-				"-m time $criteria{'time'}"
-				: '',
-			$criteria{'statistic'}	?
-				"-m statistic $criteria{'statistic'}"
-				: '',
-			defined($criteria{'state'})		?
-				"-m state --state $criteria{'state'}"
-				: '',
-			defined($criteria{'srcrange'})	?
-				"-m iprange --src-range $criteria{'srcrange'}"
-				: '',
-			defined($criteria{'dstrange'})	?
-				"-m iprange --dst-range $criteria{'dstrange'}"
-				: '',
-			defined($criteria{'mac'})		?
-				"-m mac --mac-source $criteria{'mac'}"
-				: '',
-			$line_cnt)
-		);
+		my $ipt_rule;
+		$ipt_rule .= sprintf('-A %s', $chain);
+		$ipt_rule .= sprintf(' -j %s', $criteria{'target'})		if (defined($criteria{'target'}));
+		$ipt_rule .= sprintf(' -p %s', $criteria{'proto'})		if (defined($criteria{'proto'}));
+		$ipt_rule .= sprintf(' -s %s', $criteria{'src'})		if (defined($criteria{'src'}));
+		$ipt_rule .= sprintf(' -d %s', $criteria{'dst'})		if (defined($criteria{'dst'}));
+		$ipt_rule .= sprintf(' -i %s', $criteria{'i_name'})		if (defined($criteria{'i_name'}));
+		$ipt_rule .= sprintf(' -o %s', $criteria{'o_name'})		if (defined($criteria{'o_name'}));
+		$ipt_rule .= sprintf(' --sport %s',	$criteria{'spt'})	if (defined($criteria{'spt'}));
+		$ipt_rule .= sprintf(' --dport %s',	$criteria{'dpt'})	if (defined($criteria{'dpt'}));
+		$ipt_rule .= sprintf(' -m multiport --sports %s',	$criteria{'spts'})		if (defined($criteria{'spts'}));
+		$ipt_rule .= sprintf(' -m multiport --dports %s',	$criteria{'dpts'})		if (defined($criteria{'dpts'}));
+		$ipt_rule .= sprintf(' -m mac --mac-source %s',		$criteria{'mac'})		if (defined($criteria{'mac'}));
+		$ipt_rule .= sprintf(' -m limit --limit %s',		$criteria{'limit'})		if (defined($criteria{'limit'}));
+		$ipt_rule .= sprintf(' -m state --state %s',		$criteria{'state'})		if (defined($criteria{'state'}));
+		$ipt_rule .= sprintf(' -m statistic %s',			$criteria{'statistic'})	if (defined($criteria{'statistic'}));
+		$ipt_rule .= sprintf(' -m iprange --src-range %s',	$criteria{'srcrange'})	if (defined($criteria{'srcrange'}));
+		$ipt_rule .= sprintf(' -m iprange --dst-range %s',	$criteria{'dstrange'})	if (defined($criteria{'dstrange'}));
+		$ipt_rule .= sprintf(' -p icmp --icmp-type %s',		$criteria{'icmp_type'})	if (defined($criteria{'icmp_type'}));
+		$ipt_rule .= sprintf(' -m time %s',					$criteria{'time'})		if (defined($criteria{'time'}));
+		$ipt_rule .= sprintf(' -m comment --comment "husk line %s"', $line_cnt);
+		&dbg($ipt_rule);
 
 		&ipt4($ipt_rule) if ($do_ipv4 and $rule_is_ipv4);
 
