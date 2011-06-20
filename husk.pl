@@ -1062,15 +1062,38 @@ sub compile_call {
 	$ipt_rule .= sprintf(' -m statistic %s',			$criteria{'statistic'})	if (defined($criteria{'statistic'}));
 	$ipt_rule .= sprintf(' -m iprange --src-range %s',	$criteria{'srcrange'})	if (defined($criteria{'srcrange'}));
 	$ipt_rule .= sprintf(' -m iprange --dst-range %s',	$criteria{'dstrange'})	if (defined($criteria{'dstrange'}));
-	$ipt_rule .= sprintf(' -p icmp --icmp-type %s',		$criteria{'icmp_type'})	if (defined($criteria{'icmp_type'}));
 	$ipt_rule .= sprintf(' -m time %s',					$criteria{'time'})		if (defined($criteria{'time'}));
 	$ipt_rule .= sprintf(' -m comment --comment "husk line %s"', $line_cnt);
 
-	&ipt4($ipt_rule) if ($do_ipv4 and $rule_is_ipv4);
+	PushRule:
+	{
+		my $added_something;	# Tracking success
 
-	# this is just yuck because someone decided to rename 'icmp' to 'icmpv6' (idiots)
-	$ipt_rule =~ s/icmp/icmpv6/g;
-	&ipt6($ipt_rule) if ($do_ipv6 and $rule_is_ipv6);
+		# Try pushing IPv4 rule
+		if ($do_ipv4 and $rule_is_ipv4) {
+			my $ipt4_rule = $ipt_rule;
+			if (defined($criteria{'icmp_type'})) {
+				$ipt4_rule .= sprintf(' -p icmp --icmp-type %s', $criteria{'icmp_type'});
+			};
+			$added_something += &ipt4($ipt4_rule);
+		}
+
+		# Try pushing IPv6 rule
+		if ($do_ipv6 and $rule_is_ipv6) {
+			my $ipt6_rule = $ipt_rule;
+			if (defined($criteria{'icmp_type'})) {
+				$ipt6_rule .= sprintf(' -p icmpv6 --icmpv6-type %s', $criteria{'icmp_type'});
+			};
+			$added_something += &ipt6($ipt6_rule);
+		}
+
+		# Did we succeed?
+		&warn(sprintf(
+				"The following rule did NOT compile successfully. This often happens when a DNS name is unresolvable.\n\tLine %u ==> %s",
+				$line_cnt,
+				$complete_rule,
+			)) unless $added_something;
+	}
 
 	return 1;
 }
@@ -1813,17 +1836,23 @@ sub bomb {
 	# Error handling; Yay!
 	my ($msg) = @_; $msg = 'Unspecified Error' unless $msg;
 	if ($line_cnt) {
-		printf("BOMBS AWAY (Line %u in %s): %s\n", $line_cnt, $current_rules_file, $msg);
+		printf STDERR ("BOMBS AWAY (Line %u in %s): %s\n", $line_cnt, $current_rules_file, $msg);
 	} else {
-		printf("BOMBS AWAY: %s\n", $msg);
+		printf STDERR ("BOMBS AWAY: %s\n", $msg);
 	}
 	exit 1;
+}
+
+sub warn() {
+	# Show warning to user
+	my ($msg) = @_; $msg = 'Unspecified Error' unless $msg;
+	print STDERR "WARNING: $msg\n";
 }
 
 sub dbg {
 	# Debug Helper
 	my ($msg) = @_; $msg = 'Unspecified Error' unless $msg;
-	print "DEBUG: $msg\n";
+	print STDERR "DEBUG: $msg\n";
 }
 
 sub usage {
