@@ -1009,67 +1009,69 @@ sub compile_call {
 			$recurse_rule =~ s/\bgroup $addrgrp\b/address $addr/gi;
 			&compile_call(chain=>$chain, line=>$recurse_rule);
 		}
-	} else {
-		# otherwise, build the rule into an iptables command
-
-		# make a decision if the rule is IPv4, IPv6 or Both
-		my $rule_is_ipv4 = $do_ipv4;
-		my $rule_is_ipv6 = $do_ipv6;
-		# this next section is kinda messy, but it seems to work... Get things
-		# working first, then worry about making them pretty.
-		for my $addr (@addrs_to_check) {
-			$rule_is_ipv4 = 0;
-			$rule_is_ipv6 = 0;
-
-			# See if the address is an IP Address first (to avoid unnessicary dns lookups)
-			if ($addr =~ m/$qr_ip4_cidr(:(.+))?\b/) {
-				$rule_is_ipv4 = 1;
-				next;
-			}
-			if ($addr =~ m/$qr_ip6_cidr(:(.+))?\b/) {
-				$rule_is_ipv6 = 1;
-				next;
-			}
-
-			# If we get here, the address hasn't matches the IPv4 or IPv6
-			# regex patterns, so we have to assume it's a hostname that needs
-			# to be converted to IP Address via DNS.
-			$rule_is_ipv4 = 1 if (&host_is_ipv4($addr));
-			$rule_is_ipv6 = 1 if (&host_is_ipv6($addr));
-		}
-		# check for sanity (as if thats even possible)
-		if ($rule_is_ipv4 and ! $do_ipv4 and ! $rule_is_ipv6) { &bomb('Rule requires IPv4 but IPv4 is disabled') }
-		if ($rule_is_ipv6 and ! $do_ipv6 and ! $rule_is_ipv4) { &bomb('Rule requires IPv6 but IPv6 is disabled') }
-
-		my $ipt_rule;
-		$ipt_rule .= sprintf('-A %s', $chain);
-		$ipt_rule .= sprintf(' -j %s', $criteria{'target'})		if (defined($criteria{'target'}));
-		$ipt_rule .= sprintf(' -p %s', $criteria{'proto'})		if (defined($criteria{'proto'}));
-		$ipt_rule .= sprintf(' -s %s', $criteria{'src'})		if (defined($criteria{'src'}));
-		$ipt_rule .= sprintf(' -d %s', $criteria{'dst'})		if (defined($criteria{'dst'}));
-		$ipt_rule .= sprintf(' -i %s', $criteria{'i_name'})		if (defined($criteria{'i_name'}));
-		$ipt_rule .= sprintf(' -o %s', $criteria{'o_name'})		if (defined($criteria{'o_name'}));
-		$ipt_rule .= sprintf(' --sport %s',	$criteria{'spt'})	if (defined($criteria{'spt'}));
-		$ipt_rule .= sprintf(' --dport %s',	$criteria{'dpt'})	if (defined($criteria{'dpt'}));
-		$ipt_rule .= sprintf(' -m multiport --sports %s',	$criteria{'spts'})		if (defined($criteria{'spts'}));
-		$ipt_rule .= sprintf(' -m multiport --dports %s',	$criteria{'dpts'})		if (defined($criteria{'dpts'}));
-		$ipt_rule .= sprintf(' -m mac --mac-source %s',		$criteria{'mac'})		if (defined($criteria{'mac'}));
-		$ipt_rule .= sprintf(' -m limit --limit %s',		$criteria{'limit'})		if (defined($criteria{'limit'}));
-		$ipt_rule .= sprintf(' -m state --state %s',		$criteria{'state'})		if (defined($criteria{'state'}));
-		$ipt_rule .= sprintf(' -m statistic %s',			$criteria{'statistic'})	if (defined($criteria{'statistic'}));
-		$ipt_rule .= sprintf(' -m iprange --src-range %s',	$criteria{'srcrange'})	if (defined($criteria{'srcrange'}));
-		$ipt_rule .= sprintf(' -m iprange --dst-range %s',	$criteria{'dstrange'})	if (defined($criteria{'dstrange'}));
-		$ipt_rule .= sprintf(' -p icmp --icmp-type %s',		$criteria{'icmp_type'})	if (defined($criteria{'icmp_type'}));
-		$ipt_rule .= sprintf(' -m time %s',					$criteria{'time'})		if (defined($criteria{'time'}));
-		$ipt_rule .= sprintf(' -m comment --comment "husk line %s"', $line_cnt);
-		&dbg($ipt_rule);
-
-		&ipt4($ipt_rule) if ($do_ipv4 and $rule_is_ipv4);
-
-		# this is just yuck because someone decided to rename 'icmp' to 'icmpv6' (idiots)
-		$ipt_rule =~ s/icmp/icmpv6/g;
-		&ipt6($ipt_rule) if ($do_ipv6 and $rule_is_ipv6);
+		return 1;
 	}
+
+	# make a decision if the rule is IPv4, IPv6 or Both
+	my $rule_is_ipv4 = $do_ipv4;
+	my $rule_is_ipv6 = $do_ipv6;
+	# this next section is kinda messy, but it seems to work... Get things
+	# working first, then worry about making them pretty.
+	for my $addr (@addrs_to_check) {
+		$rule_is_ipv4 = 0;
+		$rule_is_ipv6 = 0;
+
+		# See if the address is an IP Address first (to avoid unnessicary dns lookups)
+		if ($addr =~ m/$qr_ip4_cidr(:(.+))?\b/) {
+			$rule_is_ipv4 = 1;
+			next;
+		}
+		if ($addr =~ m/$qr_ip6_cidr(:(.+))?\b/) {
+			$rule_is_ipv6 = 1;
+			next;
+		}
+
+		# If we get here, the address hasn't matches the IPv4 or IPv6
+		# regex patterns, so we have to assume it's a hostname that needs
+		# to be converted to IP Address via DNS.
+		$rule_is_ipv4 = 1 if (&host_is_ipv4($addr));
+		$rule_is_ipv6 = 1 if (&host_is_ipv6($addr));
+	}
+	# check for sanity (as if thats even possible)
+	if ($rule_is_ipv4 and ! $do_ipv4 and ! $rule_is_ipv6) { &bomb('Rule requires IPv4 but IPv4 is disabled') }
+	if ($rule_is_ipv6 and ! $do_ipv6 and ! $rule_is_ipv4) { &bomb('Rule requires IPv6 but IPv6 is disabled') }
+
+	#############################################
+	# build the rule into an iptables command
+	my $ipt_rule;
+	$ipt_rule .= sprintf('-A %s', $chain);
+	$ipt_rule .= sprintf(' -j %s', $criteria{'target'})		if (defined($criteria{'target'}));
+	$ipt_rule .= sprintf(' -p %s', $criteria{'proto'})		if (defined($criteria{'proto'}));
+	$ipt_rule .= sprintf(' -s %s', $criteria{'src'})		if (defined($criteria{'src'}));
+	$ipt_rule .= sprintf(' -d %s', $criteria{'dst'})		if (defined($criteria{'dst'}));
+	$ipt_rule .= sprintf(' -i %s', $criteria{'i_name'})		if (defined($criteria{'i_name'}));
+	$ipt_rule .= sprintf(' -o %s', $criteria{'o_name'})		if (defined($criteria{'o_name'}));
+	$ipt_rule .= sprintf(' --sport %s',	$criteria{'spt'})	if (defined($criteria{'spt'}));
+	$ipt_rule .= sprintf(' --dport %s',	$criteria{'dpt'})	if (defined($criteria{'dpt'}));
+	$ipt_rule .= sprintf(' -m multiport --sports %s',	$criteria{'spts'})		if (defined($criteria{'spts'}));
+	$ipt_rule .= sprintf(' -m multiport --dports %s',	$criteria{'dpts'})		if (defined($criteria{'dpts'}));
+	$ipt_rule .= sprintf(' -m mac --mac-source %s',		$criteria{'mac'})		if (defined($criteria{'mac'}));
+	$ipt_rule .= sprintf(' -m limit --limit %s',		$criteria{'limit'})		if (defined($criteria{'limit'}));
+	$ipt_rule .= sprintf(' -m state --state %s',		$criteria{'state'})		if (defined($criteria{'state'}));
+	$ipt_rule .= sprintf(' -m statistic %s',			$criteria{'statistic'})	if (defined($criteria{'statistic'}));
+	$ipt_rule .= sprintf(' -m iprange --src-range %s',	$criteria{'srcrange'})	if (defined($criteria{'srcrange'}));
+	$ipt_rule .= sprintf(' -m iprange --dst-range %s',	$criteria{'dstrange'})	if (defined($criteria{'dstrange'}));
+	$ipt_rule .= sprintf(' -p icmp --icmp-type %s',		$criteria{'icmp_type'})	if (defined($criteria{'icmp_type'}));
+	$ipt_rule .= sprintf(' -m time %s',					$criteria{'time'})		if (defined($criteria{'time'}));
+	$ipt_rule .= sprintf(' -m comment --comment "husk line %s"', $line_cnt);
+
+	&ipt4($ipt_rule) if ($do_ipv4 and $rule_is_ipv4);
+
+	# this is just yuck because someone decided to rename 'icmp' to 'icmpv6' (idiots)
+	$ipt_rule =~ s/icmp/icmpv6/g;
+	&ipt6($ipt_rule) if ($do_ipv6 and $rule_is_ipv6);
+
+	return 1;
 }
 
 sub compile_nat {
