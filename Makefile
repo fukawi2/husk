@@ -42,6 +42,11 @@ test:
 	for pmod in $(DEP_PMODS) ; do \
 		perl -M$$pmod -e 1 || exit 1 ; \
 	done
+
+	@echo "==> Checking for valid script syntax"
+	@perl -c husk.pl
+	@bash -n fire.sh
+
 	@echo "==> It all looks good Captain!"
 
 bin: test $(PROJECT).pl fire.sh
