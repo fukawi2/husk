@@ -1835,4 +1835,116 @@ sub usage {
 	exit 1;
 }
 
+__END__
+
+###############################################################################
+### POD DOCUMENTATION MARKUP
+###############################################################################
+
+=head1 NAME
+
+husk - iptables firewall compiler with IPv4 and IPv6 support
+
+=head1 SYNOPSIS
+
+husk [OPTIONS]
+
+Brief description of default behavior here.
+
+=head1 DESCRIPTION
+
+Description here.
+
+=head1 OPTIONS
+
+=over 4
+
+=item -c, --conf
+
+Path to configuration file to use.
+Default: C</etc/husk/husk.conf>
+
+=item -h, --help
+
+Show terse help and and exit.
+
+=item -V, --version
+
+Show the version and exit.
+
+=back
+
+=head1 EXAMPLES
+
+ husk | sh
+
+ fire
+
+ fire --no-ipv6-comments
+
+=head1 RULES SYNTAX
+
+Rule Syntax goes here.
+
+=head2 EXAMPLES
+
+Example rules go here.
+
+=head1 CAVEATS
+
+=over 4
+
+=item * Caveat 1
+
+=item * Caveat 2
+
+=over 4
+
+=item * Subcaveat 1
+
+=item * Subcaveat 2
+
+=item * Subcaveat 3
+
+=back
+
+=back
+
+=head1 BUGS
+
+=head2 Reporting Bugs
+
+Email bug reports to <fukawi2@gmail.com>
+
+=head2 Known Bugs
+
+Probably some...
+
+=head1 ACKNOWLEDGEMENTS
+
+Thanls to Mike Sampson for his assistance in adding and testing IPv6 support.
+
+=head1 LICENSE
+
+Copyright 2010-2011 Phillip Smith
+
+Made available under the conditions of the GPLv2. This is free software; refer
+to the COPYING file for details.
+
+=head1 AVAILABILITY
+
+<http://www.huskfw.info/>
+
+<http://github.com/fukawi2/husk/>
+
+=head1 AUTHOR
+
+Phillip Smith aka fukawi2
+
+=head1 SEE ALSO
+
+<http://www.netfilter.org/>
+
+=cut
+
 # vim: noexpandtab sw=4 ts=4
