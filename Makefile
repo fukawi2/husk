@@ -8,6 +8,7 @@ DEP_PMODS=File::Basename Config::Simple Config::IniFiles Getopt::Long Net::DNS
 ### Destination Paths
 D_BIN=/usr/local/sbin
 D_DOC=/usr/local/share/doc/$(PROJECT)
+D_MAN=/usr/local/share/man
 D_CNF=/etc/$(PROJECT)
 D_HELPERS=$(D_CNF)/helpers
 
@@ -22,6 +23,14 @@ F_DOCS=ABOUT README rules.conf.simple rules.conf.standalone LICENSE
 all: install
 
 install: test bin docs config
+	# install the actual scripts
+	install -D -m 0755 $(PROJECT).pl $(DESTDIR)$(D_BIN)/$(PROJECT)
+	install -D -m 0755 fire.sh $(DESTDIR)$(D_BIN)/fire
+	# install documentation
+	for f in $(F_DOCS) ; do \
+		install -D -m 0644 $$f $(DESTDIR)$(D_DOC)/$$f || exit 1 ; \
+	done
+	install -Dm0644 husk.1.man $(DESTDIR)$(D_MAN)/man1/husk.1p
 
 test:
 	@echo "==> Checking for required external dependencies"
@@ -36,13 +45,9 @@ test:
 	@echo "==> It all looks good Captain!"
 
 bin: test $(PROJECT).pl fire.sh
-	install -D -m 0755 $(PROJECT).pl $(DESTDIR)$(D_BIN)/$(PROJECT)
-	install -D -m 0755 fire.sh $(DESTDIR)$(D_BIN)/fire
 
 docs: $(F_DOCS)
-	for f in $(F_DOCS) ; do \
-		install -D -m 0644 $$f $(DESTDIR)$(D_DOC)/$$f || exit 1 ; \
-	done
+	pod2man --name=husk husk.pl husk.1.man
 
 config: $(F_CONF)
 	# Install Distribution Helper Rule Files
@@ -56,6 +61,7 @@ config: $(F_CONF)
 	done
 
 uninstall:
+	rm -f $(DESTDIR)$(D_MAN)/man1/husk.1p
 	rm -f $(DESTDIR)$(D_BIN)/$(PROJECT)
 	rm -f $(DESTDIR)$(D_BIN)/fire
 	rm -f $(DESTDIR)$(D_DOC)/*
