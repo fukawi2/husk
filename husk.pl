@@ -29,6 +29,7 @@ my $VERSION = '%VERSION%';
 my ($conf_file, $conf_dir, $udc_prefix, $kw);
 my ($iptables, $iptables_restore, $ip6tables, $ip6tables_restore);	# Paths to binaries
 my ($do_ipv4, $do_ipv6);	# Enable/Disable specific IP Versions
+my $disable_ipv6_comments;	# Early versions of ip6tables didn't support the 'comment' module
 my $curr_chain;				# Name of current chain to append rules to
 my $current_rules_file;		# The filename of the rules currently being read (needs to be globally scoped to use in multiple subs)
 my $line_cnt = 0;			# Counter for line number (needs to be globally scoped to use in multiple subs)
@@ -1475,9 +1476,10 @@ sub load_interfaces {
 ###############################################################################
 sub handle_cmd_args {
 	GetOptions(
-		"conf=s"	=> \$conf_file,
-		"ipv4"		=> \$do_ipv4,
-		"ipv6"		=> \$do_ipv6,
+		"c|conf=s"	=> \$conf_file,
+		"4|ipv4"	=> \$do_ipv4,
+		"6|ipv6"	=> \$do_ipv6,
+		"no-ipv6-comments"	=> \$disable_ipv6_comments,
 	) or &usage();
 }
 
@@ -1571,6 +1573,11 @@ sub ipt4 {
 sub ipt6 {
 	my ($line) = @_;
 	return unless ($do_ipv6);
+	if ($disable_ipv6_comments) {
+		# Early versions of ip6tables did not include support for the 'comment'
+		# module (eg, CentOS 5.x) so we need to exclude them sometimes.
+		$line =~ s/-m comment --comment ("|')[^\1]+\1//;
+	}
 	push(@ipv6_rules, $line);
 }
 
