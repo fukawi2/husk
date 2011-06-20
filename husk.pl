@@ -824,8 +824,8 @@ sub log_and_drop {
 	my $chain		= $args{'chain'};
 	my $table		= $args{'table'} ? sprintf('-t %s', $args{'table'}) : '';
 	my $log_prefix	= coalesce($args{'prefix'}, $chain);
-	my $ipv4		= coalesce($args{'ipv4'}, '');
-	my $ipv6		= coalesce($args{'ipv6'}, '');
+	my $ipv4		= coalesce($args{'ipv4'}, 1);	# Assume we want IPv4
+	my $ipv6		= coalesce($args{'ipv6'}, 1);	# Assume we want IPv6
 	my $criteria	= $args{'criteria'} ? $args{'criteria'} : '';
 
 	# Validate what was passed
