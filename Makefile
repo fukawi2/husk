@@ -24,8 +24,8 @@ all: install
 
 install: test bin docs config
 	# install the actual scripts
-	install -D -m 0755 $(PROJECT).pl $(DESTDIR)$(D_BIN)/$(PROJECT)
-	install -D -m 0755 fire.sh $(DESTDIR)$(D_BIN)/fire
+	install -D -m 0755 src/$(PROJECT).pl $(DESTDIR)$(D_BIN)/$(PROJECT)
+	install -D -m 0755 src/fire.sh $(DESTDIR)$(D_BIN)/fire
 	# install documentation
 	for f in $(F_DOCS) ; do \
 		install -D -m 0644 $$f $(DESTDIR)$(D_DOC)/$$f || exit 1 ; \
@@ -45,15 +45,15 @@ test:
 	done
 
 	@echo "==> Checking for valid script syntax"
-	@perl -c husk.pl
-	@bash -n fire.sh
+	@perl -c src/husk.pl
+	@bash -n src/fire.sh
 
 	@echo "==> It all looks good Captain!"
 
 bin: test $(PROJECT).pl fire.sh
 
 docs: $(F_DOCS)
-	pod2man --name=husk husk.pl husk.1.man
+	pod2man --name=husk src/husk.pl husk.1.man
 	pod2man --name=fire fire.pod fire.1.man
 
 config: $(F_CONF)
