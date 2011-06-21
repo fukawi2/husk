@@ -400,7 +400,7 @@ sub new_call_chain {
 		unless ($interface{$i_name} or $i_name =~ m/\AANY\z/);
 	&bomb(sprintf('Undefined "out" interface on line %s: %s', $line_cnt, $o_name))
 		unless ($interface{$o_name} or $o_name =~ m/\AANY\z/);
-	
+
 	# Check if we've seen this call before
 	&bomb(sprintf("'%s' defined twice (second on line %s)", $line, $line_cnt))
 		if (defined($xzone_calls{$chain}));
@@ -409,17 +409,17 @@ sub new_call_chain {
 	my ($is_bridge_in, $is_bridge_out);
 	$is_bridge_in  = &is_bridged(eth=>$interface{$i_name}) if ($interface{$i_name});
 	$is_bridge_out = &is_bridged(eth=>$interface{$o_name}) if ($interface{$o_name});
-	
+
 	# Work out if this chain should be called from INPUT, OUTPUT or FORWARD
 	my %criteria;
-	
+
 	# Set defaults
 	$criteria{'chain'}	= 'FORWARD';
 	# We ternary test this assignment because sometimes there won't be a
 	# corresponding value in %interface (eg, for ANY)
 	$criteria{'in'}		= $interface{$i_name} ? sprintf('-i %s', $interface{$i_name}) : '';
 	$criteria{'out'}	= $interface{$o_name} ? sprintf('-o %s', $interface{$o_name}) : '';
-	
+
 	# Override defaults if required
 	if ($o_name =~ m/\AME\z/) {
 		$criteria{'chain'} = 'INPUT';
@@ -477,7 +477,7 @@ sub new_udc_chain {
 
 	# Store the UDC chain name with the line number for later
 	$udc_list{$chain} = $line_cnt;
-	
+
 	&ipt("-N $chain");
 
 	# Pass the chain name back
@@ -569,10 +569,10 @@ sub close_rules {
 			));
 		}
 	}
-	
+
 	if (scalar(keys %spoof_protection)) {
 		# Antispoof rules; Per interface
-		# Create a chain to log and drop 
+		# Create a chain to log and drop
 		&ipt(sprintf('-t %s -N %s', $SPOOF_TABLE, $SPOOF_CHAIN));
 
 		foreach my $iface (keys %spoof_protection) {
@@ -645,7 +645,7 @@ sub close_rules {
 				));
 		}
 	}
-	
+
 	# SYN Protection
 	if (scalar(@syn_protection)) {
 		# Block NEW packets without SYN set
@@ -886,7 +886,7 @@ sub compile_call {
 		# No need to continue from here; Return early.
 		return 1;
 	}
-	
+
 	my %criteria;		# Hash to store all the individual parts of this rule
 	my @addrs_to_check;	# Addresses that need to be tested for IPv4/IPv6
 
@@ -1102,7 +1102,7 @@ sub compile_nat {
 	# Compiles a 'map' rule into an iptables DNAT and SNAT rule.
 	my($rule) = @_;
 	my $complete_rule = $rule;
-	
+
 	# strip out the leading 'common' keyword
 	$rule =~ s/$qr_tgt_map//s;
 	$rule =~ &cleanup_line($rule);
@@ -1172,7 +1172,7 @@ sub compile_interception {
 	# Compiles a 'redirect' or 'intercept' rule into an iptables REDIRECT rule.
 	my($rule) = @_;
 	my $complete_rule = $rule;
-	
+
 	# strip out the leading 'common' keyword
 	$rule =~ s/$qr_tgt_redirect//s;
 	$rule =~ &cleanup_line($rule);
@@ -1181,7 +1181,7 @@ sub compile_interception {
 	# what we find in the rule.
 	my $rule_is_ipv4 = $do_ipv4;
 	my $rule_is_ipv6 = $do_ipv6;
-	
+
 	# Hash to store all the individual parts of this rule
 	my %criteria;
 
@@ -1247,7 +1247,7 @@ sub compile_common {
 
 	if ($line =~ m/$qr_CMN_NAT/) {
 		&bomb('NAT specified in rules, but IPv4 is disabled and IPv6 does not allow NAT') unless ($do_ipv4);
-		
+
 		# SNAT traffic out a given interface
 		my $snat_oeth = uc($1);
 		my $snat_chain = sprintf('snat_%s', $snat_oeth);
@@ -1264,7 +1264,7 @@ sub compile_common {
 		if ($line =~ s/\bto\s+($qr_ip4_address)\b//si) {
 			$snat_ip = $1;
 		}
-		
+
 		# Add SNAT rules to the SNAT chain
 		if ($snat_ip) {
 			# User specified a SNAT address
@@ -1288,7 +1288,7 @@ sub compile_common {
 					$line_cnt,
 			)));
 		}
-		
+
 		# Call the snat chain from POSTROUTING for private addresses
 		foreach my $rfc1918 qw(10.0.0.0/8 172.16.0.0/12 192.168.0.0/16) {
 			&ipt4(sprintf('-t nat -A POSTROUTING -o %s -s %s -j %s -m comment --comment "husk line %s"',
@@ -1321,7 +1321,7 @@ sub compile_common {
 		# antispoof rule
 		my $iface = $1;
 		my $src = $2;
-		
+
 		# Validate
 		&bomb(sprintf('Invalid interface specified for Spoof Protection: %s', $iface))
 			unless ($interface{$iface});
@@ -1358,7 +1358,7 @@ sub compile_common {
 	elsif ($line =~ m/$qr_CMN_XMAS/) {
 		# xmas packet rule
 		my $iface = $1;
-		
+
 		# Validate
 		&bomb(sprintf('Invalid interface specified for Xmas Protection: %s', $iface))
 			unless ($interface{$iface});
@@ -1760,7 +1760,7 @@ sub coalesce {
 sub timestamp {
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	return sprintf(
-		"%4d-%02d-%02d %02d:%02d:%02d", 
+		"%4d-%02d-%02d %02d:%02d:%02d",
 		$year+1900, $mon+1, $mday, $hour, $min, $sec
 	);
 }
