@@ -50,7 +50,7 @@ test:
 
 	@echo "==> It all looks good Captain!"
 
-bin: test $(PROJECT).pl fire.sh
+bin: test src/$(PROJECT).pl src/fire.sh
 
 docs: $(F_DOCS)
 	pod2man --name=husk src/husk.pl husk.1.man
