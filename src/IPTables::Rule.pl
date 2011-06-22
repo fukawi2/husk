@@ -22,6 +22,7 @@ my $qr_port_list	= qr/($qr_alphanum+,)+$qr_alphanum+/oi;
 my $qr_port_range	= qr/($qr_alphanum+:)+$qr_alphanum+/oi;
 my $qr_weekdays		= qr/((((Mon?|Tue?|Wed?|Thu?|Fri?|Sat?|Sun?)\w*),?)+)/io;
 my $qr_time24		= qr/(2[0-3]|[01]?[0-9]):([0-5]?[0-9]):([0-5]?[0-9])/o;
+my $qr_iso8601		= qr/(\d{4})\D?(0[1-9]|1[0-2])\D?([12]\d|0[1-9]|3[01])(\D?([01]\d|2[0-3])\D?([0-5]\d)\D?([0-5]\d)?\D?(\d{3})?)?/o;
 my $qr_tables		= qr/(filter|nat|mangle|raw)/io;
 
 # constructor
@@ -57,6 +58,7 @@ sub table {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_table};
 		return unless ($val =~ m/\A$qr_tables\z/);
 		$self->{_table} = $val;
 	}
@@ -67,6 +69,7 @@ sub chain {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_chain};
 		return unless ($val =~ m/\A\w+\z/);
 		$self->{_chain} = $val;
 	}
@@ -77,6 +80,7 @@ sub target {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_table};
 		return unless ($val =~ m/\A\w+\z/);
 		$self->{_target} = $val;
 	}
@@ -87,6 +91,7 @@ sub source {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_src};
 		# work out if this is an ip address, ip cidr, hostname or ip range
 		if ($val =~ m/\A$qr_ip4_address\z/) {
 			# IP Address
@@ -117,6 +122,7 @@ sub destination {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_dst};
 		# work out if this is an ip address, ip cidr, hostname or ip range
 		if ($val =~ m/\A$qr_ip4_address\z/) {
 			# IP Address
@@ -147,6 +153,7 @@ sub inbound {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_eth_in};
 		return unless ($val =~ m/\A$qr_eth_name\z/);
 		$self->{_eth_in} = $val;
 	}
@@ -157,6 +164,7 @@ sub outbound {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_eth_out};
 		return unless ($val =~ m/\A$qr_eth_name\z/);
 		$self->{_eth_out} = $val;
 	}
@@ -167,6 +175,7 @@ sub protocol {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_protocol};
 		if ($val =~ m/\A$qr_protocols\z/) {
 			$self->{_protocol} = lc($val);
 		}
@@ -185,6 +194,8 @@ sub source_port {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_spt};
+		undef $self->{_spts};
 		# is this a port, port list or port range?
 		if ($val =~ m/\A$qr_port\z/) {
 			$self->{_spt} = lc($val);
@@ -207,6 +218,8 @@ sub destination_port {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_dpt};
+		undef $self->{_dpts};
 		# is this a port, port list or port range?
 		if ($val =~ m/\A$qr_port\z/) {
 			$self->{_dpt} = lc($val);
@@ -229,6 +242,7 @@ sub comment {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_comment};
 		$val =~ s/"//g;	# strip quote characters
 		$self->{_comment} = $val;
 	}
@@ -239,6 +253,7 @@ sub mac_address {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_mac};
 		return unless ($val =~ m/\A$qr_mac_address\z/);
 		$self->{_mac} = lc($val);
 	}
@@ -249,6 +264,7 @@ sub state {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_state};
 		return unless ($val =~ m/\A$qr_tcp_states\z/);
 		$self->{_state} = uc($val);
 	}
@@ -260,6 +276,7 @@ sub limit_packets {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_limit_packets};
 		return unless ($val =~ m/\A$qr_number\z/);
 		$self->{_limit_packets} = $val;
 	}
@@ -270,6 +287,7 @@ sub limit_period {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_limit_period};
 		return unless ($val =~ m/\A(second|minute|hour|day)\z/i);
 		$self->{_limit_period} = $val;
 	}
@@ -280,6 +298,7 @@ sub limit_burst {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_limit_burst};
 		return unless ($val =~ m/\A$qr_number\z/);
 		$self->{_limit_burst} = $val;
 	}
@@ -302,10 +321,34 @@ sub limit {
 	return ($self->limit_packets, $self->limit_period, $self->limit_burst);
 }
 ### iptables module: time
+sub date_start {
+	my ($self, $val) = @_;
+
+	# ISO 8601 "T" notation: 1970-01-01T00:00:00 to 2038-01-19T04:17:07
+	if (defined($val)) {
+		undef $self->{_date_start};
+		return unless ($val =~ m/\A$qr_iso8601\z/);
+		$self->{_date_start} = $val;
+	}
+
+	return $self->{_date_start};
+}
+sub date_finish {
+	my ($self, $val) = @_;
+
+	if (defined($val)) {
+		undef $self->{_date_finish};
+		return unless ($val =~ m/\A$qr_iso8601\z/);
+		$self->{_date_finish} = $val;
+	}
+
+	return $self->{_date_finish};
+}
 sub time_start {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_time_start};
 		return unless ($val =~ m/\A$qr_time24\z/);
 		$self->{_time_start} = $val;
 	}
@@ -316,6 +359,7 @@ sub time_finish {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_time_finish};
 		return unless ($val =~ m/\A$qr_time24\z/);
 		$self->{_time_finish} = $val;
 	}
@@ -326,6 +370,7 @@ sub time_weekdays {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
+		undef $self->{_time_weekdays};
 		return unless ($val =~ m/\A$qr_weekdays\z/);
 		$self->{_time_weekdays} = $1;
 	}
@@ -349,18 +394,26 @@ sub time {
 }
 ### iptables module: statistic
 sub every {
-	my ($self, $every, $offset) = @_;
+	my ($self, $every) = @_;
 
 	if (defined($every)) {
+		undef $self->{_statistic_every};
 		return unless ($every =~ m/\A$qr_number\z/);
 		$self->{_statistic_every} = $every;
 	}
+
+	return $self->{_statistic_every};
+}
+sub offset {
+	my ($self, $offset) = @_;
+
 	if (defined($offset)) {
+		undef $self->{_statistic_offset};
 		return unless ($offset =~ m/\A$qr_number\z/);
 		$self->{_statistic_offset} = $offset;
 	}
 
-	return ($self->{_statistic_every}, $self->{_statistic_offset});
+	return $self->{_statistic_offset};
 }
 
 sub compile {
@@ -384,31 +437,21 @@ sub compile {
 
 	# aggregate criteria that is part of a single module to one usage of the module
 	$self->{_time} = undef;
-	if (defined($self->{_time_start})) {
-		$self->{_time} .= "--timestart $self->{_time_start}";
-	}
-	if (defined($self->{_time_start})) {
-		$self->{_time} .= "--timestop $self->{_time_finish}";
-	}
-	if (defined($self->{_time_weekdays})) {
-		$self->{_time} .= "--weekdays $self->{_time_weekdays}";
-	}
-	$self->{_statistic} = undef;
-	if (defined($self->{_statistics_every})) {
-		$self->{_time} .= "--mode nth --every $self->{_statistics_every}";
-	}
-	if (defined($self->{_statistics_offset})) {
-		$self->{_time} .= "--packet $self->{_statistics_offset}";
-	}
-	$self->{_limit} = undef;
-	if (defined($self->{_limit_packets})) {
-		$self->{_limit} .= "--limit $self->{_limit_packets}";
-	}
-	if (defined($self->{_limit_burst})) {
-		$self->{_limit} .= "--limit-burst $self->{_limit_burst}";
-	}
+	$self->{_time} .= "--datestart $self->{_date_start}"	if (defined($self->{_date_start}))
+	$self->{_time} .= "--datestop $self->{_date_finish}"	if (defined($self->{_date_start})) {
+	$self->{_time} .= "--timestart $self->{_time_start}"	if (defined($self->{_time_start}))
+	$self->{_time} .= "--timestop $self->{_time_finish}"	if (defined($self->{_time_start})) {
+	$self->{_time} .= "--weekdays $self->{_time_weekdays}"	if (defined($self->{_time_weekdays})) {
 
-	my $ipt_rule = sprintf('-t %s -A %s', $self->table, $self->chain);
+	$self->{_statistic} = undef;
+	$self->{_statistic} .= "--mode nth --every $self->{_statistics_every}"	if (defined($self->{_statistics_every})) {
+	$self->{_statistic} .= "--packet $self->{_statistics_offset}"			if (defined($self->{_statistics_offset})) {
+
+	$self->{_limit} = undef;
+	$self->{_limit} .= "--limit $self->{_limit_packets}"		if (defined($self->{_limit_packets})) {
+	$self->{_limit} .= "--limit-burst $self->{_limit_burst}"	if (defined($self->{_limit_burst})) {
+
+	my $ipt_rule;
 	$ipt_rule .= sprintf(' -j %s', $self->target)		if (defined($self->target));
 	$ipt_rule .= sprintf(' -p %s', $self->proto)		if (defined($self->proto));
 	$ipt_rule .= sprintf(' -i %s', $self->inbound)		if (defined($self->inbound));
@@ -427,7 +470,23 @@ sub compile {
 	$ipt_rule .= sprintf(' -m iprange --dst-range %s',	$self->{_dstrange})	if (defined($self->{_dstrange}));
 	$ipt_rule .= sprintf(' -m time %s',					$self->{_time})		if (defined($self->{_time}));
 	$ipt_rule .= sprintf(' -m comment --comment "%s"',	$self->comment)		if (defined($self->comment));
-	print($ipt_rule."\n");
+
+	# Make sure we have criteria set
+	unless ($ipt_rule) {
+		$self->{_last_error} = 'No criteria or action set';
+		return;
+	}
+
+	# All good! Pass back the compiled rule
+	return sprintf('-t %s -A %s%s', $self->table, $self->chain, $ipt_rule);
+}
+
+sub truncate {
+	my ($self) = @_;
+
+	foreach my $k (keys %{$self}) {
+		undef $self->{$k} if ($k =~ m/\A_/);
+	}
 
 	return 1;
 }
@@ -470,14 +529,25 @@ $ipt_rule->table('filter');
 $ipt_rule->chain('OUTPUT');
 $ipt_rule->source('1.2.3.4');
 $ipt_rule->src('4.3.2.1');
-#$ipt_rule->proto('esp');
+$ipt_rule->proto('tcp');
 $ipt_rule->dest_port('21');
 $ipt_rule->target('accept');
 
 for my $d qw/Mon mon Monday tue,th sat,sun sat,sun,mon wed fr fake noaday/ {
 	print("===> $d\n");
 	$ipt_rule->time_weekdays($d);
-	$ipt_rule->compile() or print($ipt_rule->last_error."\n");
+	print(($ipt_rule->compile() or $ipt_rule->last_error)."\n");
 }
+
+$ipt_rule->truncate;
+$ipt_rule->table('filter');
+$ipt_rule->chain('FORWARD');
+print(($ipt_rule->compile() or $ipt_rule->last_error)."\n");
+
+$ipt_rule->truncate;
+$ipt_rule->table('filter');
+$ipt_rule->chain('INPUT');
+$ipt_rule->time_weekdays('Wednesday');
+print(($ipt_rule->compile() or $ipt_rule->last_error)."\n");
 
 exit 0;
