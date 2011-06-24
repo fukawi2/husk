@@ -11,11 +11,11 @@ my $qr_mac_address	= qr/(([A-F0-9]{2}[:.-]?){6})/io;
 my $qr_hostname		= qr/(([A-Z0-9]|[A-Z0-9][A-Z0-9\-]*[A-Z0-9])\.)*([A-Z]|[A-Z][A-Z0-9\-]*[A-Z0-9])/io;
 my $qr_ip4_address	= qr/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/o;
 my $qr_ip4_cidr		= qr/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/([0-9]{1,2}))?/o;
-#my $qr_ip6_address	= qr/${\&make_ipv6_regex()}/io;
-#my $qr_ip6_cidr		= qr/${\&make_ipv6_regex()}(\/[0-9]{1,3})?/io;
+my $qr_ip6_address	= qr/${\&make_ipv6_regex()}/io;
+my $qr_ip6_cidr		= qr/${\&make_ipv6_regex()}(\/[0-9]{1,3})?/io;
 my $qr_eth_name		= qr/\w{2,5}$qr_number/o;
 my $qr_int_name		= qr/\w+/o;
-my $qr_protocols	= qr/(tcp|udp|udplite|icmp|esp|ah|sctp|all)/io;
+my $qr_protocols	= qr/(tcp|udp|udplite|icmp|icmpv6|esp|ah|sctp|all)/io;
 my $qr_tcp_states	= qr/(NEW|ESTABLISHED|RELATED|INVALID|UNTRACKED)/io;
 my $qr_port			= $qr_alphanum;
 my $qr_port_list	= qr/($qr_alphanum+,)+$qr_alphanum+/oi;
@@ -23,7 +23,37 @@ my $qr_port_range	= qr/($qr_alphanum+:)+$qr_alphanum+/oi;
 my $qr_weekdays		= qr/((((Mon?|Tue?|Wed?|Thu?|Fri?|Sat?|Sun?)\w*),?)+)/io;
 my $qr_time24		= qr/(2[0-3]|[01]?[0-9]):([0-5]?[0-9]):([0-5]?[0-9])/o;
 my $qr_iso8601		= qr/(\d{4})\D?(0[1-9]|1[0-2])\D?([12]\d|0[1-9]|3[01])(\D?([01]\d|2[0-3])\D?([0-5]\d)\D?([0-5]\d)?\D?(\d{3})?)?/o;
+my $qr_builtins		= qr/(ACCEPT|DROP|REJECT|LOG|QUEUE|NFQUEUE|RETURN)/io;
 my $qr_tables		= qr/(filter|nat|mangle|raw)/io;
+my %qr_chains		= (
+	filter	=> qr/(FORWARD|(IN|OUT)PUT)/io,
+	nat		=> qr/(OUTPUT|(PRE|POST)ROUTING)/io,
+	mangle	=> qr/(FORWARD|(IN|OUT)PUT|(PRE|POST)ROUTING)/io,
+	raw		=> qr/(PREROUTING|OUTPUT)/io,
+);
+
+sub make_ipv6_regex {
+	# Taken from CPAN Regexp::IPv6 by Salvador Fandiño García
+	my $IPv4 = "((25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2}))";
+	my $G = "[0-9a-fA-F]{1,4}";
+
+	my @tail = (
+		":",
+		"(:($G)?|$IPv4)",
+		":($IPv4|$G(:$G)?|)",
+		"(:$IPv4|:$G(:$IPv4|(:$G){0,2})|:)",
+		"((:$G){0,2}(:$IPv4|(:$G){1,2})|:)",
+		"((:$G){0,3}(:$IPv4|(:$G){1,2})|:)",
+		"((:$G){0,4}(:$IPv4|(:$G){1,2})|:)" );
+
+	my $IPv6_re = $G;
+	$IPv6_re = "$G:($IPv6_re|$_)" for @tail;
+	$IPv6_re = qq/:(:$G){0,5}((:$G){1,2}|:$IPv4)|$IPv6_re/;
+	$IPv6_re =~ s/\(/(?:/g;
+	#$IPv6_re = qr/$IPv6_re/;
+	return $IPv6_re;
+}
+
 
 # constructor
 sub new {
@@ -38,7 +68,8 @@ sub new {
 		_time_start => undef,		_time_finish => undef,	_time_days => undef,	# time module
 		_src_range_start => undef,	_src_range_end => undef,						# iprange module
 		_statistic_every => undef,	_statistic_offset => undef,						# statistic module
-		_last_error => undef,	};
+		_last_error => undef,
+	};
 	bless $self, $class;
 	return $self;
 }
@@ -70,7 +101,9 @@ sub chain {
 
 	if (defined($val)) {
 		undef $self->{_chain};
+		return unless ($self->{_table});
 		return unless ($val =~ m/\A\w+\z/);
+		$val = uc($val) if ($val =~ m/\A$qr_chains{$self->{_table}}\z/);
 		$self->{_chain} = $val;
 	}
 
@@ -80,8 +113,9 @@ sub target {
 	my ($self, $val) = @_;
 
 	if (defined($val)) {
-		undef $self->{_table};
+		undef $self->{_target};
 		return unless ($val =~ m/\A\w+\z/);
+		$val = uc($val) if ($val =~ m/\A$qr_builtins\z/);
 		$self->{_target} = $val;
 	}
 
@@ -94,21 +128,34 @@ sub source {
 		undef $self->{_src};
 		# work out if this is an ip address, ip cidr, hostname or ip range
 		if ($val =~ m/\A$qr_ip4_address\z/) {
-			# IP Address
+			# IPv4 Address
 			$self->{_src} = $val;
 		}
 		elsif ($val =~ m/\A$qr_ip4_cidr\z/) {
-			# IP CIDR
+			# IPv4 CIDR
 			$self->{_src} = $val;
+		}
+		elsif ($val =~ m/\A($qr_ip4_address)-($qr_ip4_address)\z/) {
+			# IPv4 Range
+			$self->{_src_range_start}	= $1;
+			$self->{_src_range_end}		= $2;
+		}
+		elsif ($val =~ m/\A$qr_ip6_address\z/) {
+			# IPv6 Address
+			$self->{_src} = $val;
+		}
+		elsif ($val =~ m/\A$qr_ip6_cidr\z/) {
+			# IPv6 Address
+			$self->{_src} = $val;
+		}
+		elsif ($val =~ m/\A($qr_ip6_address)-($qr_ip6_address)\z/) {
+			# IPv6 Range
+			$self->{_src_range_start}	= $1;
+			$self->{_src_range_end}		= $2;
 		}
 		elsif ($val =~ m/\A$qr_hostname\z/) {
 			# Hostname
 			$self->{_src} = $val;
-		}
-		elsif ($val =~ m/\A($qr_ip4_address)-($qr_ip4_address)\z/) {
-			# IP Range
-			$self->{_src_range_start}	= $1;
-			$self->{_src_range_end}		= $2;
 		}
 		else {
 			# Something invalid
@@ -132,14 +179,27 @@ sub destination {
 			# IP CIDR
 			$self->{_dst} = $val;
 		}
-		elsif ($val =~ m/\A$qr_hostname\z/) {
-			# Hostname
-			$self->{_dst} = $val;
-		}
 		elsif ($val =~ m/\A($qr_ip4_address)-($qr_ip4_address)\z/) {
 			# IP Range
 			$self->{_dst_range_start}	= $1;
 			$self->{_dst_range_end}		= $2;
+		}
+		elsif ($val =~ m/\A$qr_ip6_address\z/) {
+			# IPv6 Address
+			$self->{_dst} = $val;
+		}
+		elsif ($val =~ m/\A$qr_ip6_cidr\z/) {
+			# IPv6 Address
+			$self->{_dst} = $val;
+		}
+		elsif ($val =~ m/\A($qr_ip6_address)-($qr_ip6_address)\z/) {
+			# IPv6 Range
+			$self->{_dst_range_start}	= $1;
+			$self->{_dst_range_end}		= $2;
+		}
+		elsif ($val =~ m/\A$qr_hostname\z/) {
+			# Hostname
+			$self->{_dst} = $val;
 		}
 		else {
 			# Something invalid
@@ -270,6 +330,16 @@ sub state {
 	}
 
 	return $self->{_state};
+}
+sub icmp_type {
+	my ($self, $val) = @_;
+
+	if (defined($val)) {
+		undef $self->{_icmp_type};
+		$self->{_icmp_type} = $val;
+	}
+
+	return $self->{_icmp_type};
 }
 ### iptables module: time
 sub limit_packets {
@@ -435,25 +505,86 @@ sub compile {
 		}
 	}
 
+	# anything ip version specific?
+	my $version_reqd;		# IP Version of the rule
+	foreach my $k qw/_src _src_range_start _src_range_end _dst _dst_range_start _dst_range_end/ {
+		my $this_addr_version;	# IP Version of this address
+
+		next unless ($self->{$k});
+
+		my $addr = $self->{$k};
+		undef $this_addr_version;
+		if ($addr =~ m/\A($qr_ip4_address|$qr_ip4_cidr|$qr_ip4_address-$qr_ip4_address)\z/) {
+			# IPv4
+			$this_addr_version = 4;
+		} elsif ($addr =~ m/\A($qr_ip6_address|$qr_ip6_cidr|$qr_ip6_address-$qr_ip6_address)\z/) {
+			# IPv6
+			$this_addr_version = 6;
+		}
+
+		# OK? OK.
+		if ($version_reqd and $this_addr_version != $version_reqd) {
+			$self->{_last_error} = sprintf(
+				'Mixing of IP Protocols not possible. Detected [%s] as IPv%u but found another address for IPv%u',
+				$addr,
+				$this_addr_version,
+				$version_reqd
+			);
+			return;
+		} else {
+			$version_reqd = $this_addr_version;
+		}
+	}
+	if ($self->{_protocol}) {
+		if ($self->{_protocol} eq 'icmp') {
+			# IPv4
+			if ($version_reqd and $version_reqd != 4) {
+				$self->{_last_error} = 'Protocol [ICMP] requires IPv4';
+				return;
+			}
+			$version_reqd = 4;
+		}
+		if ($self->{_protocol} eq 'icmpv6') {
+			# IPv4
+			if ($version_reqd and $version_reqd != 6) {
+				$self->{_last_error} = 'Protocol [ICMPv6] requires IPv6';
+				return;
+			}
+			$version_reqd = 6;
+		}
+	}
+	# assume ipv4 after this point unless already set to ipv6
+	$version_reqd = 4 unless ($version_reqd);
+	if ($self->{_icmp_type}) {
+		# Make icmp_type take precedence over the protocol; ignore whatever
+		# protocol was previously set and force it to the appropriate icmp(v6)
+		$self->{_protocol} = ($version_reqd == 4) ? 'icmp' : 'icmpv6';
+	}
+
 	# aggregate criteria that is part of a single module to one usage of the module
 	$self->{_time} = undef;
-	$self->{_time} .= "--datestart $self->{_date_start}"	if (defined($self->{_date_start}))
-	$self->{_time} .= "--datestop $self->{_date_finish}"	if (defined($self->{_date_start})) {
-	$self->{_time} .= "--timestart $self->{_time_start}"	if (defined($self->{_time_start}))
-	$self->{_time} .= "--timestop $self->{_time_finish}"	if (defined($self->{_time_start})) {
-	$self->{_time} .= "--weekdays $self->{_time_weekdays}"	if (defined($self->{_time_weekdays})) {
+	$self->{_time} .= "--datestart $self->{_date_start}"	if (defined($self->{_date_start}));
+	$self->{_time} .= "--datestop $self->{_date_finish}"	if (defined($self->{_date_start}));
+	$self->{_time} .= "--timestart $self->{_time_start}"	if (defined($self->{_time_start}));
+	$self->{_time} .= "--timestop $self->{_time_finish}"	if (defined($self->{_time_start}));
+	$self->{_time} .= "--weekdays $self->{_time_weekdays}"	if (defined($self->{_time_weekdays}));
 
 	$self->{_statistic} = undef;
-	$self->{_statistic} .= "--mode nth --every $self->{_statistics_every}"	if (defined($self->{_statistics_every})) {
-	$self->{_statistic} .= "--packet $self->{_statistics_offset}"			if (defined($self->{_statistics_offset})) {
+	$self->{_statistic} .= "--mode nth --every $self->{_statistics_every}"	if (defined($self->{_statistics_every}));
+	$self->{_statistic} .= "--packet $self->{_statistics_offset}"			if (defined($self->{_statistics_offset}));
 
 	$self->{_limit} = undef;
-	$self->{_limit} .= "--limit $self->{_limit_packets}"		if (defined($self->{_limit_packets})) {
-	$self->{_limit} .= "--limit-burst $self->{_limit_burst}"	if (defined($self->{_limit_burst})) {
+	$self->{_limit} .= "--limit $self->{_limit_packets}"		if (defined($self->{_limit_packets}));
+	$self->{_limit} .= "--limit-burst $self->{_limit_burst}"	if (defined($self->{_limit_burst}));
 
 	my $ipt_rule;
 	$ipt_rule .= sprintf(' -j %s', $self->target)		if (defined($self->target));
 	$ipt_rule .= sprintf(' -p %s', $self->proto)		if (defined($self->proto));
+	if ($self->{_icmp_type}) {
+		$ipt_rule .= sprintf(' %s %s',	# This is special because the syntax is different between IPv4 and IPv6
+			($version_reqd == 4) ? '--icmp-type' : '--icmpv6-type',
+			$self->icmp_type);
+	}
 	$ipt_rule .= sprintf(' -i %s', $self->inbound)		if (defined($self->inbound));
 	$ipt_rule .= sprintf(' -o %s', $self->outbound)		if (defined($self->outbound));
 	$ipt_rule .= sprintf(' -s %s', $self->{_src})		if (defined($self->{_src}));
@@ -541,12 +672,17 @@ for my $d qw/Mon mon Monday tue,th sat,sun sat,sun,mon wed fr fake noaday/ {
 
 $ipt_rule->truncate;
 $ipt_rule->table('filter');
-$ipt_rule->chain('FORWARD');
+$ipt_rule->chain('FORWArd');
+$ipt_rule->src('192.168.1.1');
+$ipt_rule->dest('2001::de:ad:be:ef');
 print(($ipt_rule->compile() or $ipt_rule->last_error)."\n");
 
 $ipt_rule->truncate;
 $ipt_rule->table('filter');
-$ipt_rule->chain('INPUT');
+$ipt_rule->chain('inpuasdfasdft');
+$ipt_rule->target('accept');
+$ipt_rule->dest('2001::de:ad:be:ef');
+$ipt_rule->icmp_type('icmp-echo-request') or print "bullshit rejected\n";
 $ipt_rule->time_weekdays('Wednesday');
 print(($ipt_rule->compile() or $ipt_rule->last_error)."\n");
 
