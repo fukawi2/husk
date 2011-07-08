@@ -507,7 +507,8 @@ sub compile {
 
 	# anything ip version specific?
 	my $version_reqd;		# IP Version of the rule
-	foreach my $k qw/_src _src_range_start _src_range_end _dst _dst_range_start _dst_range_end/ {
+	my $reason_for_selecting_version;
+	foreach my $k (qw/_src _src_range_start _src_range_end _dst _dst_range_start _dst_range_end/) {
 		my $this_addr_version;	# IP Version of this address
 
 		next unless ($self->{$k});
@@ -517,18 +518,20 @@ sub compile {
 		if ($addr =~ m/\A($qr_ip4_address|$qr_ip4_cidr|$qr_ip4_address-$qr_ip4_address)\z/) {
 			# IPv4
 			$this_addr_version = 4;
+			$reason_for_selecting_version = sprintf('address [%s] is IPv4', $1) unless ($reason_for_selecting_version);
 		} elsif ($addr =~ m/\A($qr_ip6_address|$qr_ip6_cidr|$qr_ip6_address-$qr_ip6_address)\z/) {
 			# IPv6
 			$this_addr_version = 6;
+			$reason_for_selecting_version = sprintf('address [%s] is IPv6', $1) unless ($reason_for_selecting_version);
 		}
 
 		# OK? OK.
 		if ($version_reqd and $this_addr_version != $version_reqd) {
 			$self->{_last_error} = sprintf(
-				'Mixing of IP Protocols not possible. Detected [%s] as IPv%u but found another address for IPv%u',
+				'Mixing of IP Protocols not possible. Detected [%s] as IPv%u but %s',
 				$addr,
 				$this_addr_version,
-				$version_reqd
+				$reason_for_selecting_version,
 			);
 			return;
 		} else {
@@ -631,7 +634,7 @@ sub last_error {
 package IPTables::Rule::IPv4;
 use strict;
 use warnings;
-our @ISA = qw(IPTables::Rule);    # inherits from IPTables::Rule
+our @ISA = (qw(IPTables::Rule));    # inherits from IPTables::Rule
 
 # constructor
 sub new {
@@ -664,7 +667,7 @@ $ipt_rule->proto('tcp');
 $ipt_rule->dest_port('21');
 $ipt_rule->target('accept');
 
-for my $d qw/Mon mon Monday tue,th sat,sun sat,sun,mon wed fr fake noaday/ {
+for my $d (qw/Mon mon Monday tue,th sat,sun sat,sun,mon wed fr fake noaday/) {
 	print("===> $d\n");
 	$ipt_rule->time_weekdays($d);
 	print(($ipt_rule->compile() or $ipt_rule->last_error)."\n");
