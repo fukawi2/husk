@@ -23,7 +23,6 @@ use strict;
 use Config::Simple;		# To parse husk.conf
 use Config::IniFiles;	# To parse here documents in hostgroups.conf
 use Getopt::Long;
-use Net::DNS;
 
 my $VERSION = '%VERSION%';
 
@@ -1024,7 +1023,7 @@ sub compile_call {
 		$rule_is_ipv4 = 0;
 		$rule_is_ipv6 = 0;
 
-		# See if the address is an IP Address first (to avoid unnessicary dns lookups)
+		# See if the address is an IP Address first
 		if ($addr =~ m/$qr_ip4_cidr(:(.+))?\b/) {
 			$rule_is_ipv4 = 1;
 			next;
@@ -1034,11 +1033,11 @@ sub compile_call {
 			next;
 		}
 
-		# If we get here, the address hasn't matches the IPv4 or IPv6
-		# regex patterns, so we have to assume it's a hostname that needs
-		# to be converted to IP Address via DNS.
-		$rule_is_ipv4 = 1 if (&host_is_ipv4($addr));
-		$rule_is_ipv6 = 1 if (&host_is_ipv6($addr));
+		# Looking up DNS hosts at compile time is fucking slow to the point of being
+		# annoying so if a hostname is supplied, we will make an IPv4 and an IPv6
+		# rule with it and let iptables worry about resolving it during load.
+		$rule_is_ipv4 = $do_ipv4;
+		$rule_is_ipv6 = $do_ipv6;
 	}
 	# check for sanity (as if thats even possible)
 	if ($rule_is_ipv4 and ! $do_ipv4 and ! $rule_is_ipv6) { &bomb('Rule requires IPv4 but IPv4 is disabled') }
@@ -1091,7 +1090,7 @@ sub compile_call {
 
 		# Did we succeed?
 		&warn(sprintf(
-				"The following rule did NOT compile successfully. This often happens when a DNS name is unresolvable.\n\tLine %u ==> %s",
+				"The following rule did NOT compile successfully:\n\tLine %u ==> %s",
 				$line_cnt,
 				$complete_rule,
 			)) unless $added_something;
@@ -1790,45 +1789,6 @@ sub make_ipv6_regex {
 	$IPv6_re =~ s/\(/(?:/g;
 	#$IPv6_re = qr/$IPv6_re/;
 	return $IPv6_re;
-}
-
-###############################################################################
-#### NETWORKING HELPERS
-###############################################################################
-sub resolve_dns() {
-	my ($host, $rr_type) = @_;
-
-	my $resolv = Net::DNS::Resolver->new(
-		searchlist	=> (),
-		recurse		=> 0,
-		debug		=> 1,
-		defnames	=> 0,
-	);
-
-	# Errors (if any) are in $resolv->errorstring
-	my $dns_packet	= $resolv->query($host, $rr_type);
-	if ($dns_packet) {
-		my @return_ips;
-
-		foreach my $rr ($dns_packet->answer) {
-			next unless ($rr->type eq $rr_type);
-			push(@return_ips, $rr->address);
-		}
-		return @return_ips;
-	}
-
-	# Nothing found
-	return;
-}
-
-sub host_is_ipv4() {
-	my ($host) = @_;
-	return &resolve_dns($host, 'A');
-}
-
-sub host_is_ipv6() {
-	my ($host) = @_;
-	return &resolve_dns($host, 'AAAA');
 }
 
 ###############################################################################
