@@ -33,7 +33,7 @@ trap "rm -f $TFILE; rm -f $SFILE" EXIT 1 2 3 4 5 6 7 8 10 11 12 13 14 15
 
 # Check we've got all our dependencies
 export PATH='/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin'
-for ebin in iptables-save iptables-restore husk mktemp cat grep ; do
+for ebin in iptables-save iptables-restore husk mktemp cat grep logger ; do
 	[[ -z "$(which $ebin 2>/dev/null)" ]] && { echo "Could not locate '$ebin'" >&2; exit 1; }
 done
 TFILE=$(mktemp -t husk-fire.XXX)
@@ -65,8 +65,15 @@ fi
 
 # Apply the new rules
 echo "Activating rules...."
-/bin/bash $TFILE
+activation_output=$(/bin/bash $TFILE)
 
+# How did we go?
+if [[ -n "$activation_output" ]] ; then
+	# uhoh, generated some output...
+	logger -s -t husk-fire -p user.warning <<< $activation_output
+fi
+
+# Get user confirmation that it's all OK (unless asked not to)
 if [ "${args[0]}" != '--no-confirm' ] ; then
 	echo -n "Can you establish NEW connections to the machine? (y/N) "
 	read -n1 -t "${TIMEOUT}" ret 2>&1 || :
