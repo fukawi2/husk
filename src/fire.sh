@@ -94,8 +94,10 @@ if [ "${args[0]}" != '--no-confirm' ] ; then
 fi
 
 # Save to init script file if possible
-for init_script in '/etc/init.d/iptables' '/etc/rc.d/iptables' ; do
-	[[ -x "$init_script" ]] && { $init_script save > /dev/null; break; }
+for init_script in 'iptables' 'ip6tables' ; do
+	for init_path in '/etc/init.d' '/etc/rc.d' ; do
+		[[ -x "$init_path/$init_script" ]] && { echo "Asking $init_script to save"; $init_path/$init_script save > /dev/null; break; }
+	done
 done
 
 exit 0
