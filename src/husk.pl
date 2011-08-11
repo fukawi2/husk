@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+package main;
+
 use warnings;
 use strict;
 #use 5.010_001;	# Need Perl version 5.10 for Coalesce operator (//)
