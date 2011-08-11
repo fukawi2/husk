@@ -164,10 +164,10 @@ $PORTSCAN_RULES{'-p tcp --tcp-flags ALL ALL'}			= 'PORTSCAN: ALL/ALL';
 $PORTSCAN_RULES{'-p tcp --tcp-flags ALL NONE'}			= 'PORTSCAN: NMAP Null Scan';
 
 # An array of reserved words that can't be used as target names
-my @RESERVED_WORDS = qw(
+my @RESERVED_WORDS = (qw(
 	accept		drop		log			redirect	trap
 	map			common		iptables	ip6tables	include
-);
+));
 
 ###############################################################################
 #### MAIN CODE
@@ -788,7 +788,7 @@ sub close_rules {
 	}
 
 	# Set policies
-	foreach my $chain qw(INPUT FORWARD OUTPUT) {
+	foreach my $chain (qw(INPUT FORWARD OUTPUT)) {
 		&ipt(sprintf('-P %s DROP', $chain));
 	}
 }
@@ -1292,7 +1292,7 @@ sub compile_common {
 		}
 
 		# Call the snat chain from POSTROUTING for private addresses
-		foreach my $rfc1918 qw(10.0.0.0/8 172.16.0.0/12 192.168.0.0/16) {
+		foreach my $rfc1918 (qw(10.0.0.0/8 172.16.0.0/12 192.168.0.0/16)) {
 			&ipt4(sprintf('-t nat -A POSTROUTING -o %s -s %s -j %s -m comment --comment "husk line %s"',
 					$interface{$snat_oeth},
 					$rfc1918,
@@ -1510,25 +1510,25 @@ sub handle_cmd_args {
 
 sub init {
 	# reset policies to ACCEPT
-	foreach my $chain qw[INPUT OUTPUT FORWARD] {
+	foreach my $chain (qw(INPUT OUTPUT FORWARD)) {
 		&ipt("-P $chain ACCEPT");
 	}
 
 	# wipe everything so we know we are starting fresh. we use 2 loops here
 	# because IPv6 doesn't have a "nat" table.
-	foreach my $table qw[filter nat mangle raw] {
+	foreach my $table (qw(filter nat mangle raw)) {
 		&ipt4("-t $table -F");	# Flush all rules in all chains
 		&ipt4("-t $table -X");	# Delete all user-defined chains
 		&ipt4("-t $table -Z");	# Reset counters
 	}
-	foreach my $table qw[filter mangle raw] {
+	foreach my $table (qw(filter mangle raw)) {
 		&ipt6("-t $table -F");	# Flush all rules in all chains
 		&ipt6("-t $table -X");	# Delete all user-defined chains
 		&ipt6("-t $table -Z");	# Reset counters
 	}
 
 	# add standard rules
-	foreach my $chain qw[INPUT FORWARD OUTPUT] {
+	foreach my $chain (qw(INPUT FORWARD OUTPUT)) {
 		&ipt(sprintf('-A %s -m state --state ESTABLISHED -j ACCEPT',	$chain));
 		&ipt(sprintf('-A %s -m state --state RELATED -j ACCEPT',		$chain));
 	}
