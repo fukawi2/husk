@@ -1748,11 +1748,67 @@ husk - iptables firewall compiler with IPv4 and IPv6 support
 
 husk [OPTIONS]
 
-Brief description of default behavior here.
+Without any options, husk will look for a configuration file in /etc/husk/ and
+attempt to compile the firewall rules into iptables syntax, writing its output
+to stdout
 
 =head1 DESCRIPTION
 
-Description here.
+husk is a natural language wrapper around the Linux iptables packet filtering
+engine (iptables). It is designed to abstract the sometimes confusing syntax of
+iptables, allowing use of rules that have better readability, and expressed in
+a more 'freeform' and reusable fashion compared to normal 'raw' iptables rules.
+
+husk can be used on either firewall/router computers (with multiple network
+interfaces), or standalone systems (with one network interface)
+
+Each interface (real or virtual) is called a 'zone' in husk. Zones are given a
+friendly name which is what is used in the rule definitions. This abstracts the
+Linux device names (eg, eth0, ppp0, bond0 etc) into much more intuitive names
+such as NET, LAN and DMZ. This has the added benefit of moving interfaces in
+the future can be done simply by changing the name-to-device mapping.
+
+=head2 fire script
+
+It is suggested to use the supplied "fire" script when loading your rules. This
+script provides several functions:
+
+=over 4
+
+=item * Compiles your rule file(s) ready to activate
+
+=item * Saves the live rules to a temporary file to allow rollback
+
+=item * Attempts to load the new rules (non-atomically; see below)
+
+=item * Asks you for confirmation that the rules loaded successfully. If
+confirmation is not given, rollback to previous rules is initiated after a
+timeout.
+
+=item * Calls the iptables/ip6tables init script to save the new rules so they
+are loaded again at next reboot.
+
+=back
+
+=head2 Atomic loading of rules
+
+It has been consciously considered and decided AGAINST atomic loading of rules
+using iptables-restore for several reasons:
+
+=over 4
+
+=item * Compiling to the format required by iptables-restore is more
+complicated than for the regular iptables command.
+
+=item * iptables-restore (currently) does not give much useful information
+about errors if there is a problem with the rules it is loaded. This makes
+debug much more difficult than seeing exactly which rule failed when running
+multiple plain iptables commands.
+
+=item * With atomic reload, a single bad rule will prevent all rules from being
+loaded. With plain iptables commands, only the invalid rule(s) aren't loaded.
+
+=back
 
 =head1 OPTIONS
 
@@ -1775,37 +1831,114 @@ Show the version and exit.
 
 =head1 EXAMPLES
 
- husk | sh
+	husk | sh
 
- fire
+Using the associated "fire" script:
 
- fire --no-ipv6-comments
+	fire
+
+	fire --no-ipv6-comments
+
+=head1 HELPERS
+
+Several helpers have been supplied with husk to assist with firewalling common
+ports/applications such as:
+
+=over4
+
+=item * Apple IOS Devices
+
+=item * DHCP
+
+=item * DNS
+
+=item * Email Ports
+
+=item * Windows (Active Directory, CIFS/Samba etc)
+
+=item * SQL Applications
+
+=back
+
+Check in the C<helpers/> path for others.
+
+=head2 Using Helpers
+
+Using helpers is a 2 step process:
+
+=over4
+
+=item 1. Include the helper file with the C<include /path/to/helper> directive
+
+=item 2. Use the chains that helper creates.
+
+=back
+
+Refer to the example rules below to see it in action (eg, the ICMP helper).
 
 =head1 RULES SYNTAX
 
-Rule Syntax goes here.
+To be completed.
 
 =head2 EXAMPLES
 
-Example rules go here.
+This set of example rules is for a simple firewall/router machine.
+
+	include helpers/icmp.conf
+	include helpers/gotomeeting.conf
+	include helpers/samba.conf
+	
+	define rules LAN to NET
+	GOTOMEETING source address 192.168.100.100
+	SAMBA destination address cifs.example.com
+	accept all	# Allow everything from local network
+	end define
+	
+	define rules LAN to ME
+	accept protocol tcp ports ssh,smtp,domain
+	accept protocol udp ports ntp,domain
+	accept protocol udp ports bootps,bootpc	# Allow clients to DHCP
+	end define
+	
+	define rules INPUT
+	ICMP all protocol icmp
+	end define
+	
+	define rules OUTPUT
+	# Refer to CAVEATS below.
+	reject state new protocol tcp port 6667:6669	# No IRC from this box
+	accept all
+	end define
+	
+	define rules FORWARD
+	ICMP all protocol icmp
+	drop protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
+	drop protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
+	# Allow bounce routing
+	accept in LAN out LAN
+	end define
+	
+	# Standard stuff
+	common loopback
+	common nat NET
+	common bogon NET
+	common portscan NET
+	common xmas NET
+	common syn NET
+	common spoof LAN 10.0.0.0/24
 
 =head1 CAVEATS
 
 =over 4
 
-=item * Caveat 1
+=item * Remember the default policy for ALL chains in the 'filter' table is
+DROP. THIS INCLUDES 'OUTPUT' so you need to explicitly allow (or write
+appropriate rules for) outbound traffic. See example rules above.
 
-=item * Caveat 2
-
-=over 4
-
-=item * Subcaveat 1
-
-=item * Subcaveat 2
-
-=item * Subcaveat 3
-
-=back
+=item * Early implementations of the IPv6 version of iptables (ip6tables) did
+NOT support the 'comment' module. This module is used on EVERY rule to identify
+where in the source file it was generated from. If you are using husk with an
+early version of ip6tables, you need to use the --disable-ipv6-comments option.
 
 =back
 
@@ -1817,7 +1950,7 @@ Email bug reports to <fukawi2@gmail.com>
 
 =head2 Known Bugs
 
-Probably some...
+None. Refer to "Reporting Bugs" ;)
 
 =head1 ACKNOWLEDGEMENTS
 
