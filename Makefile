@@ -18,6 +18,8 @@ F_HELPERS=icmp.conf samba.conf apple-ios.conf avg.conf dhcp.conf mail.conf \
 		  dns.conf snmp.conf sql.conf gotomeeting.conf pptp.conf
 F_DOCS=ABOUT README rules.conf.simple rules.conf.standalone LICENSE
 
+fb_dir=.husk-fallback-$(shell date +%Y%m%d%H%M%S)
+
 ###############################################################################
 
 all: install
@@ -32,6 +34,17 @@ install: test bin docs config
 	done
 	install -Dm0644 husk.1.man $(DESTDIR)$(D_MAN)/man1/husk.1p
 	install -Dm0644 fire.1.man $(DESTDIR)$(D_MAN)/man1/fire.1p
+
+fallback:
+	mkdir $(fb_dir)
+	cp $(DESTDIR)$(D_BIN)/$(PROJECT) $(fb_dir)/
+	cp $(DESTDIR)$(D_BIN)/fire $(fb_dir)/
+	for f in $(F_DOCS) ; do \
+		cp $(DESTDIR)$(D_DOC)/$$f $(fb_dir)/ || exit 1 ; \
+	done
+	@echo "IF THE NEXT COMMANDS FAIL, THAT IS OK"
+	@cp $(DESTDIR)$(D_MAN)/man1/husk.1p $(fb_dir)/ || true
+	@cp $(DESTDIR)$(D_MAN)/man1/fire.1p $(fb_dir)/ || true
 
 test:
 	@echo "==> Checking for required external dependencies"
