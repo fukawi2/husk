@@ -41,8 +41,10 @@ SFILE=$(mktemp -t husk-fire-save.XXX)
 
 # Compile ruleset to a temporary file
 echo 'Compiling rules.... '
+logger -t husk-fire -p user.info -- 'Beginning compilation'
 if "husk" $@ &> "$TFILE" ; then
     echo '   DONE'
+	logger -t husk-fire -p user.info -- 'Compilation complete'
 else
     echo 'Error compiling ruleset:' >&2
 	cat "$TFILE" >&2
@@ -65,6 +67,7 @@ fi
 
 # Apply the new rules
 echo "Activating rules...."
+logger -t husk-fire -p user.info -- 'Activating compiled rules'
 activation_output=$(/bin/bash $TFILE)
 
 # How did we go?
@@ -81,10 +84,12 @@ if [ "${args[0]}" != '--no-confirm' ] ; then
 	case "${ret:-}" in
 		y*|Y*)
 			echo "Thank-you, come again!"
+			logger -t husk-fire -p user.info -- 'New firewall rules loaded!'
 			;;
 		*)
 			if [[ -z "${ret}" ]]; then
 				echo "Uh-oh... Timeout waiting for reply!" >&2
+				logger -t husk-fire -p user.info -- 'Timeout waiting for user confirmation of rules; ROLL BACK INITIATED'
 			fi
 			echo "Reverting to saved rules..." >&2
 			iptables-restore < "$SFILE";
@@ -96,7 +101,11 @@ fi
 # Save to init script file if possible
 for init_script in 'iptables' 'ip6tables' ; do
 	for init_path in '/etc/init.d' '/etc/rc.d' ; do
-		[[ -x "$init_path/$init_script" ]] && { echo "Asking $init_script to save"; $init_path/$init_script save > /dev/null; break; }
+		if [[ -x "$init_path/$init_script" ]] ; then
+			logger -t husk-fire -p user.debug -- "Found executable script '$init_path/$init_script'; Calling with 'save' argument"
+			$init_path/$init_script save > /dev/null
+			break
+		fi
 	done
 done
 
