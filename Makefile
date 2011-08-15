@@ -3,7 +3,7 @@ PROJECT=husk
 
 ### Dependencies
 DEP_BINS=perl iptables iptables-save iptables-restore mktemp cat grep bash
-DEP_PMODS=File::Basename Config::Simple Config::IniFiles Getopt::Long Net::DNS
+DEP_PMODS=File::Basename Config::Simple Config::IniFiles Getopt::Long
 
 ### Destination Paths
 D_BIN=/usr/local/sbin
