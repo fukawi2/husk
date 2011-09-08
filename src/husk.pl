@@ -1383,7 +1383,7 @@ sub read_config_file {
 
 	# make sure the file exists first
 	&bomb(sprintf('Configuration file not found: %s', $fname))
-		unless (-e $fname);
+		unless (-f $fname);
 
 	my $cfg = new Config::Simple($fname);
 	my %config = $cfg->vars();
