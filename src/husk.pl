@@ -1413,16 +1413,16 @@ sub read_config_file {
 		&bomb(sprintf('Configuration dir not found: %s', $conf_dir))
 			unless (-e $conf_dir);
 		if ($do_ipv4) {
-			&bomb(sprintf('Could not find iptables binary: %s', $iptables))
-				unless (-e $iptables);
-			&bomb(sprintf('Could not find iptables-restore binary: %s', $iptables_restore))
-				unless (-e $iptables_restore);
+			&bomb(sprintf('Could not find iptables binary: %s', $iptables ? $iptables : 'NOT FOUND'))
+				unless ($iptables and -e $iptables);
+			&bomb(sprintf('Could not find iptables-restore binary: %s', $iptables_restore ? $iptables_restore : 'NOT FOUND'))
+				unless ($iptables_restore and -e $iptables_restore);
 		}
 		if ($do_ipv6) {
-			&bomb(sprintf('Could not find ip6tables binary: %s', $ip6tables))
-				unless (-e $ip6tables);
-			&bomb(sprintf('Could not find ip6tables-restore binary: %s', $ip6tables_restore))
-				unless (-e $ip6tables_restore);
+			&bomb(sprintf('Could not find ip6tables binary: %s', $ip6tables ? $ip6tables : 'NOT FOUND'))
+				unless ($ip6tables and -e $ip6tables);
+			&bomb(sprintf('Could not find ip6tables-restore binary: %s', $ip6tables_restore ? $ip6tables_restore : $ip6tables_restore))
+				unless ($ip6tables_restore and -e $ip6tables_restore);
 		}
 	}
 }
