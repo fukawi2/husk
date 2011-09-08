@@ -1260,6 +1260,13 @@ sub compile_common {
 		# Create a SNAT chain for this interface
 		&ipt4(sprintf('-t nat -N %s', $snat_chain));
 
+		# Only specific sources?
+		my $snat_src;
+		if ($line =~ s/\b(source|src)( address(es)?)?\s+($qr_ip4_cidr)\b//si) {
+			$snat_src = $4;
+			&warn('common NAT rule found specifying source address; Not supported yet');
+		}
+
 		# Work out if we're SNAT'ing or MASQUERADING
 		my $snat_ip;
 		if ($line =~ s/\bto\s+($qr_ip4_address)\b//si) {
