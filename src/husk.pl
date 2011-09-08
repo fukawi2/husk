@@ -214,7 +214,7 @@ sub read_rules_file {
 
 	# make sure the file exists first
 	&bomb(sprintf('Rules file does not exist: %s', $fname))
-		unless (-e $fname);
+		unless (-f $fname);
 
 	local(*FILE);
 	open FILE, "<$fname" or &bomb("Failed to read $fname");
@@ -1418,18 +1418,18 @@ sub read_config_file {
 
 		# check everything actually exists
 		&bomb(sprintf('Configuration dir not found: %s', $conf_dir))
-			unless (-e $conf_dir);
+			unless (-d $conf_dir);
 		if ($do_ipv4) {
 			&bomb(sprintf('Could not find iptables binary: %s', $iptables ? $iptables : 'NOT FOUND'))
-				unless ($iptables and -e $iptables);
+				unless ($iptables and -x $iptables);
 			&bomb(sprintf('Could not find iptables-restore binary: %s', $iptables_restore ? $iptables_restore : 'NOT FOUND'))
-				unless ($iptables_restore and -e $iptables_restore);
+				unless ($iptables_restore and -x $iptables_restore);
 		}
 		if ($do_ipv6) {
 			&bomb(sprintf('Could not find ip6tables binary: %s', $ip6tables ? $ip6tables : 'NOT FOUND'))
-				unless ($ip6tables and -e $ip6tables);
+				unless ($ip6tables and -x $ip6tables);
 			&bomb(sprintf('Could not find ip6tables-restore binary: %s', $ip6tables_restore ? $ip6tables_restore : $ip6tables_restore))
-				unless ($ip6tables_restore and -e $ip6tables_restore);
+				unless ($ip6tables_restore and -x $ip6tables_restore);
 		}
 	}
 }
@@ -1443,7 +1443,7 @@ sub load_addrgroups {
 	# Validate what was passed
 	&bomb((caller(0))[3] . ' called without passing $fname') unless $fname;
 
-	if ( -e $fname) {
+	if ( -f $fname) {
 		tie %addr_group, 'Config::IniFiles', ( -file => $fname );
 	}
 }
