@@ -99,14 +99,21 @@ if [ "${args[0]}" != '--no-confirm' ] ; then
 fi
 
 # Save to init script file if possible
+saved=0
 for init_script in 'iptables' 'ip6tables' ; do
 	for init_path in '/etc/init.d' '/etc/rc.d' ; do
 		if [[ -x "$init_path/$init_script" ]] ; then
 			logger -t husk-fire -p user.debug -- "Found executable script '$init_path/$init_script'; Calling with 'save' argument"
 			$init_path/$init_script save > /dev/null
+			saved=1
 			break
 		fi
 	done
 done
+if [[ $saved != 1 ]]  ; then
+	# Debian perhaps that doesn't have an iptables init script?
+	[[ -n "$(which iptables-save)" ]]	&& iptables-save > /etc/iptables.rules
+	[[ -n "$(which ip6tables-save)" ]]	&& ip6tables-save > /etc/ip6tables.rules
+fi
 
 exit 0
