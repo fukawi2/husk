@@ -103,3 +103,55 @@ fix CHANGES file because my release script is fucked
 updated CHANGES file for commits between ver_0.9.0 to ver_0.9.0
 fix CHANGES file because my release script is fucked
 updated CHANGES file for commits between ver_0.9.0 to ver_0.9.0
+* ==> Version 0.9.1
+added Net::DNS as a perl dep in Makefile
+avoid stderr output if required binaries are missing while reading config file
+whoops, typo
+wrong variable used when compiling iptables and ip6tables commands
+no need for &set_ipv6_regexes() anymore
+updated reserved words list
+code tidy up by using a sub for both ipv4 and ipv6
+code flow lead to excessive dns lookups for ip addresses
+syntax for calling sub
+added a more complete list of ipv6 bogons
+updated copyright statements
+better way to consolidate module options into one hash value
+cleanup use of &collapse_spaces, gratutious sprintf and ternary tests
+no need for else block
+avoid &log_and_drop not generating any output
+added command line arg to disable ipv6 comments
+added initial POD documentation and updated makefile to convert it to man pages
+better handling of pushing rules to our output array; added &warn; errors no go to stderr
+Makefile now tests script syntax
+updated pod documentation
+added file starting work on an OO interface to write rules; removed a lot of trailing whitespace
+Makefile: updated to match move of scripts to src/ subdir
+updated ports for samba/cifs helper
+fixed Makefile bin target
+lots of fixes and additional shit
+Merge branch 'master' of github.com:fukawi2/husk
+added ipv6 and icmp support
+large update of Windows/Active Directory helper including better notes about each port
+Merge branch 'master' of github.com:fukawi2/husk
+no fucking idea what this includes
+added "dynamic port" ranges to active directory helper
+removed old RPC ports from ACTIVE_DIRECTORY helper
+added warning about ACTIVE_DIRECTORY helper being too open
+added package main to top of file
+fix use of qw that causes depreciation warnings with perl 5.14+
+Merge branch 'master' of github.com:fukawi2/husk
+remove dns resolution in script. too fucking slow
+use logger to log to syslog in fire.sh
+fire.sh: shell save to iptables and ip6tables instead of just iptables
+added "fallback" target to makefile
+added additional use of syslog in fire script
+removed depreciated subs
+large update to husk man page
+removed Net::DNS from Makefile test
+added udp 750 to samba active directory helper (kerberos)
+added port 464 (kerberos kpasswd) ports to ACTIVE_DIRECTORY helper
+make sure conf file is an existing FILE, not just an existing anything
+avoid "undef" errors if binaries cant be found in conf or using `which`
+initial processing of "source" arguments for common NAT rules
+change to proper existence tests for file/dir/executability
+add a generic save of iptables-save to /etc/iptables.rules if we cant find a proper init script
