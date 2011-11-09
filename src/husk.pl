@@ -1914,7 +1914,7 @@ Using the associated "fire" script:
 Several helpers have been supplied with husk to assist with firewalling common
 ports/applications such as:
 
-=over4
+=over 4
 
 =item * Apple IOS Devices
 
@@ -1936,7 +1936,7 @@ Check in the C<helpers/> path for others.
 
 Using helpers is a 2 step process:
 
-=over4
+=over 4
 
 =item 1. Include the helper file with the C<include /path/to/helper> directive
 
