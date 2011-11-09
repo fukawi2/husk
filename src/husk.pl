@@ -2045,7 +2045,57 @@ Phillip Smith aka fukawi2
 
 =head1 SEE ALSO
 
+netfilter homepage:
 <http://www.netfilter.org/>
+
+=head2 IPv4 AND GENERAL REFERENCES
+
+RFC919; Broadcasting Internet Datagrams:
+<http://www.ietf.org/rfc/rfc919.txt>
+
+RFC1112; Host Extensions for IP Multicasting:
+<http://www.ietf.org/rfc/rfc1112.txt>
+
+RFC1122; Requirements for Internet Hosts (Communication Layers):
+<http://www.ietf.org/rfc/rfc1122.txt>
+
+RFC1166; Internet Numbers:
+<http://www.ietf.org/rfc/rfc1166.txt>
+
+RFC1918; Address Allocation for Private Internets:
+<http://www.ietf.org/rfc/rfc1918.txt>
+
+RFC2544; Benchmarking Methodology for Network Interconnect Devices:
+<http://www.ietf.org/rfc/rfc2544.txt>
+
+RFC3927; Dynamic Configuration of IPv4 Link-Local Addresses:
+<http://www.ietf.org/rfc/rfc3927.txt>
+
+RFC5736; IANA IPv4 Special Purpose Address Registry:
+<http://www.ietf.org/rfc/rfc5736.txt>
+
+RFC5737; IPv4 Address Blocks Reserved for Documentation:
+<http://www.ietf.org/rfc/rfc5737.txt>
+
+=head2 IPv6 REFERENCES
+
+RFC3879; Deprecating Site Local Addresses:
+<http://www.ietf.org/rfc/rfc3879.txt>
+
+RFC4291; IP Version 6 Addressing Architecture:
+<http://www.ietf.org/rfc/rfc4291.txt>
+
+RFC4548; Internet Code Point (ICP) Assignments for NSAP Addresses:
+<http://www.ietf.org/rfc/rfc4548.txt>
+
+RFC4048; RFC 1888 Is Obsolete:
+<http://www.ietf.org/rfc/rfc4048.txt>
+
+RFC1888; OSI NSAPs and IPv6:
+<http://www.ietf.org/rfc/rfc1888.txt>
+
+RFC4193; Unique Local IPv6 Unicast Addresses:
+<http://www.ietf.org/rfc/rfc4193.txt>
 
 =cut
 
