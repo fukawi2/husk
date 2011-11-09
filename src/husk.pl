@@ -1328,7 +1328,7 @@ sub compile_common {
 	elsif ($line =~ m/$qr_CMN_SPOOF/) {
 		# antispoof rule
 		my $iface = $1;
-		my $src = $2;
+		my $src = &trim($2);
 
 		# Validate
 		&bomb(sprintf('Invalid interface specified for Spoof Protection: %s', $iface))
