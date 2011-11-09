@@ -28,7 +28,7 @@ my $VERSION = '%VERSION%';
 
 # runtime vars
 my ($conf_file, $conf_dir, $udc_prefix, $kw);
-my ($iptables, $iptables_restore, $ip6tables, $ip6tables_restore);	# Paths to binaries
+my ($iptables, $ip6tables);	# Paths to binaries
 my ($do_ipv4, $do_ipv6);	# Enable/Disable specific IP Versions
 my $disable_ipv6_comments;	# Early versions of ip6tables didn't support the 'comment' module
 my $curr_chain;				# Name of current chain to append rules to
@@ -1396,17 +1396,13 @@ sub read_config_file {
 	my %config = $cfg->vars();
 	$conf_dir			= coalesce($config{'default.conf_dir'},				'/etc/husk');
 	$iptables			= coalesce($config{'default.iptables'},				`which iptables 2>/dev/null`);
-	$iptables_restore	= coalesce($config{'default.iptables-restore'},		`which iptables-restore 2>/dev/null`);
 	$ip6tables			= coalesce($config{'default.ip6tables'},			`which ip6tables 2>/dev/null`);
-	$ip6tables_restore	= coalesce($config{'default.ip6tables-restore'},	`which ip6tables-restore 2>/dev/null`);
 	$udc_prefix			= coalesce($config{'default.udc_prefix'}, 			'x_');
 	$do_ipv4			= coalesce($config{'default.ipv4'}, 				1);
 	$do_ipv6			= coalesce($config{'default.ipv6'}, 				0);
 	chomp($conf_dir);
 	chomp($iptables)			if ($iptables);
-	chomp($iptables_restore)	if ($iptables_restore);
 	chomp($ip6tables)			if ($ip6tables);
-	chomp($ip6tables_restore)	if ($ip6tables_restore);
 	chomp($udc_prefix);
 	chomp($do_ipv4);
 	chomp($do_ipv6);
@@ -1422,14 +1418,10 @@ sub read_config_file {
 		if ($do_ipv4) {
 			&bomb(sprintf('Could not find iptables binary: %s', $iptables ? $iptables : 'NOT FOUND'))
 				unless ($iptables and -x $iptables);
-			&bomb(sprintf('Could not find iptables-restore binary: %s', $iptables_restore ? $iptables_restore : 'NOT FOUND'))
-				unless ($iptables_restore and -x $iptables_restore);
 		}
 		if ($do_ipv6) {
 			&bomb(sprintf('Could not find ip6tables binary: %s', $ip6tables ? $ip6tables : 'NOT FOUND'))
 				unless ($ip6tables and -x $ip6tables);
-			&bomb(sprintf('Could not find ip6tables-restore binary: %s', $ip6tables_restore ? $ip6tables_restore : $ip6tables_restore))
-				unless ($ip6tables_restore and -x $ip6tables_restore);
 		}
 	}
 }
