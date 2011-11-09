@@ -30,6 +30,7 @@ my $VERSION = '%VERSION%';
 my ($conf_file, $conf_dir, $udc_prefix, $kw);
 my ($iptables, $ip6tables);	# Paths to binaries
 my ($do_ipv4, $do_ipv6);	# Enable/Disable specific IP Versions
+my $ignore_autoconf;		# Ignore autoconf traffic before antispoof logging?
 my $disable_ipv6_comments;	# Early versions of ip6tables didn't support the 'comment' module
 my $curr_chain;				# Name of current chain to append rules to
 my $current_rules_file;		# The filename of the rules currently being read (needs to be globally scoped to use in multiple subs)
@@ -620,6 +621,14 @@ sub close_rules {
 						$iface));
 				}
 			}
+
+			# Silently DROP if the packet is from autoconfig addr and ignore_autoconf is true
+			&ipt4(sprintf('-t %s -A %s -i %s -s 169.254.0.0/16 -m comment --comment "prevent autoconfig addr being logged as spoofed" -j DROP',
+				$SPOOF_TABLE,
+				$SPOOF_CHAIN,
+				$interface{$iface},
+			)) if ($ignore_autoconf);
+
 			# LOG, then DROP anything else
 			log_and_drop(
 				table=>		$SPOOF_TABLE,
@@ -1400,12 +1409,14 @@ sub read_config_file {
 	$udc_prefix			= coalesce($config{'default.udc_prefix'}, 			'x_');
 	$do_ipv4			= coalesce($config{'default.ipv4'}, 				1);
 	$do_ipv6			= coalesce($config{'default.ipv6'}, 				0);
+	$ignore_autoconf	= coalesce($config{'default.ignore_autoconf'}, 		0);
 	chomp($conf_dir);
 	chomp($iptables)			if ($iptables);
 	chomp($ip6tables)			if ($ip6tables);
 	chomp($udc_prefix);
 	chomp($do_ipv4);
 	chomp($do_ipv6);
+	chomp($ignore_autoconf);
 
 	# validate config
 	{
