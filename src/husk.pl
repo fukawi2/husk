@@ -1585,7 +1585,7 @@ sub unknown_keyword {
 	$rule =~ m/^\s*(\S+)+\b/; $unknown_keyword = $1;
 	$complete_rule =~ m/\b$unknown_keyword\b/; my $pos = length($`) + 1;
 	&bomb(sprintf(
-		"Unknown keyword(s) found: %s\n\t%s\n\t%${pos}s-- HERE",
+		"Unknown keyword(s) or invalid syntax found: %s\n\t%s\n\t%${pos}s-- HERE",
 		&trim($rule),
 		$complete_rule,
 		'^'));
