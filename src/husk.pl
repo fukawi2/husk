@@ -493,7 +493,7 @@ sub close_chain {
 
 	if ($closing_tgt and $closing_tgt =~ m/DROP/) {
 		# Cross zone chain with DROP to close with.
-		log_and_drop(chain=>$chain);
+		&log_and_drop(chain=>$chain);
 	} elsif ($closing_tgt) {
 		# Cross zone chain with something other than 'DROP' as the closing action.
 		&ipt(sprintf('-A %s -j %s', $chain, $closing_tgt));
@@ -526,7 +526,7 @@ sub close_rules {
 		if ($do_ipv4) {
 			foreach my $bogon_src (keys %IPV4_BOGON_SOURCES) {
 				# LOG and DROP bad sources (bogons)
-				log_and_drop(
+				&log_and_drop(
 					table=>		$BOGON_TABLE,
 					chain=>		$BOGON_CHAIN,
 					prefix=>	'BOGON',
@@ -544,7 +544,7 @@ sub close_rules {
 		if ($do_ipv6) {
 			foreach my $bogon_src (sort(keys %IPV6_BOGON_SOURCES)) {
 				# LOG and DROP bad sources (bogons)
-				log_and_drop(
+				&log_and_drop(
 					table=>		$BOGON_TABLE,
 					chain=>		$BOGON_CHAIN,
 					prefix=>	'BOGON',
@@ -630,7 +630,7 @@ sub close_rules {
 			)) if ($ignore_autoconf);
 
 			# LOG, then DROP anything else
-			log_and_drop(
+			&log_and_drop(
 				table=>		$SPOOF_TABLE,
 				chain=>		$SPOOF_CHAIN,
 				prefix=>	sprintf('SPOOFED in %s', $iface),
@@ -660,7 +660,7 @@ sub close_rules {
 	if (scalar(@syn_protection)) {
 		# Block NEW packets without SYN set
 		&ipt(sprintf('-t %s -N %s', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
-		log_and_drop(
+		&log_and_drop(
 			table=>		$SYN_PROT_TABLE,
 			chain=>		$SYN_PROT_CHAIN,
 			prefix=>	'NEW_NO_SYN',
@@ -686,7 +686,7 @@ sub close_rules {
 	if (scalar(@xmas_protection)) {
 		# Block Xmas Packets
 		&ipt(sprintf('-t %s -N %s', $XMAS_TABLE, $XMAS_CHAIN));
-		log_and_drop(
+		&log_and_drop(
 			table=>		$XMAS_TABLE,
 			chain=>		$XMAS_CHAIN,
 			prefix=>	'XMAS_LIGHT',
@@ -694,7 +694,7 @@ sub close_rules {
 			ipv6=>		1,
 			criteria=>	'-p tcp --tcp-flags ALL ALL'
 		);
-		log_and_drop(
+		&log_and_drop(
 			table=>		$XMAS_TABLE,
 			chain=>		$XMAS_CHAIN,
 			prefix=>	'XMAS_DARK',
@@ -723,7 +723,7 @@ sub close_rules {
 		foreach my $ps_rule (sort(keys %PORTSCAN_RULES)) {
 			# LOG and DROP things that look like portscans
 			my $scan_desc = $PORTSCAN_RULES{$ps_rule};
-			log_and_drop(
+			&log_and_drop(
 				table=>		$PORTSCAN_TABLE,
 				chain=>		$PORTSCAN_CHAIN,
 				prefix=>	$scan_desc,
