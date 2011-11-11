@@ -795,6 +795,13 @@ sub close_rules {
 		&ipt($xzone_calls{$xzone_rule});
 	}
 
+	# Create a LOG rule for anything that slips this far. This could
+	# happen with packets coming in an interface that has not been
+	# defined as a husk zone (ergo has no rules). This traffic will be
+	# DROPPED by the chain policy.
+	&log_and_drop(chain=>'INPUT',	prefix=>'LATE DROP');
+	&log_and_drop(chain=>'FORWARD',	prefix=>'LATE DROP');
+
 	# Set policies
 	foreach my $chain (qw(INPUT FORWARD OUTPUT)) {
 		&ipt(sprintf('-P %s DROP', $chain));
