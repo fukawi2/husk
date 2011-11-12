@@ -27,14 +27,14 @@ use Getopt::Long;
 my $VERSION = '%VERSION%';
 
 # Configuration Defaults
-my %conf_defaults[;
-$conf_defaults[conf_dir] 		= '/etc/husk';
-$conf_defaults[iptables]		= `which iptables 2>/dev/null`;
-$conf_defaults[ip6tables]		= `which ip6tables 2>/dev/null`;
-$conf_defaults[udc_prefix]		= 'tgt_';
-$conf_defaults[do_ipv4]			= 1;
-$conf_defaults[do_ipv6]			= 0;
-$conf_defaults[ignore_autoconf]	= 0;
+my %conf_defaults;
+$conf_defaults{conf_dir} 		= '/etc/husk';
+$conf_defaults{iptables}		= `which iptables 2>/dev/null`;
+$conf_defaults{ip6tables}		= `which ip6tables 2>/dev/null`;
+$conf_defaults{udc_prefix}		= 'tgt_';
+$conf_defaults{do_ipv4}			= 1;
+$conf_defaults{do_ipv6}			= 0;
+$conf_defaults{ignore_autoconf}	= 0;
 
 # runtime vars
 my ($conf_file, $conf_dir, $udc_prefix, $kw);
@@ -1420,13 +1420,13 @@ sub read_config_file {
 
 	my $cfg = new Config::Simple($fname);
 	my %config = $cfg->vars();
-	$conf_dir			= coalesce($config{'default.conf_dir'},			$conf_defaults[conf_dir]);
-	$iptables			= coalesce($config{'default.iptables'},			$conf_defaults[iptables]);
-	$ip6tables			= coalesce($config{'default.ip6tables'},		$conf_defaults[ip6tables]);
-	$udc_prefix			= coalesce($config{'default.udc_prefix'}, 		$conf_defaults[udc_prefix]);
-	$do_ipv4			= coalesce($config{'default.ipv4'}, 			$conf_defaults[do_ipv4]);
-	$do_ipv6			= coalesce($config{'default.ipv6'}, 			$conf_defaults[do_ipv6]);
-	$ignore_autoconf	= coalesce($config{'default.ignore_autoconf'},	$conf_defaults[ignore_autoconf]);
+	$conf_dir			= coalesce($config{'default.conf_dir'},			$conf_defaults{conf_dir});
+	$iptables			= coalesce($config{'default.iptables'},			$conf_defaults{iptables});
+	$ip6tables			= coalesce($config{'default.ip6tables'},		$conf_defaults{ip6tables});
+	$udc_prefix			= coalesce($config{'default.udc_prefix'}, 		$conf_defaults{udc_prefix});
+	$do_ipv4			= coalesce($config{'default.ipv4'}, 			$conf_defaults{do_ipv4});
+	$do_ipv6			= coalesce($config{'default.ipv6'}, 			$conf_defaults{do_ipv6});
+	$ignore_autoconf	= coalesce($config{'default.ignore_autoconf'},	$conf_defaults{ignore_autoconf});
 	chomp($conf_dir);
 	chomp($iptables)			if ($iptables);
 	chomp($ip6tables)			if ($ip6tables);
