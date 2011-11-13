@@ -216,3 +216,21 @@ updated CHANGES file for commits between ver_0.9.1 to ver_0.9.2
 Revert "updated CHANGES file for commits between ver_0.9.1 to ver_0.9.2"
 Revert "updated CHANGES file for commits between ver_0.9.0 to ver_0.9.1"
 updated CHANGES file for commits between ver_0.9.0 to ver_0.9.1
+* ==> Version 0.9.3
+added tcp 6052 to avg helper
+fix whitespace in avg helper
+trim $src in spoof to prevent excess whitespace in output
+remove references to iptables-restore; not used anymore
+added ignore_autoconf option to prevent logging of traffic from rfc3927 autoconfiged hosts
+added "configuration" section to husk manpage
+fixed typos in pod syntax
+expanded man page to include full list of references within SEE ALSO section
+fix regex for finding bad syntax
+more accurate error message when invalid syntax is found
+Create a LOG rule for anything that slips to the end of chains.
+fix perl syntax for calling subrouting log_and_drop
+fix perl syntax for calling subroutine log_and_drop
+Merge branch 'master' of github.com:fukawi2/husk
+fixed default husk.conf file
+removal of magic constants to set config file defaults when reading conf file
+perl syntax errors in the last commit.
