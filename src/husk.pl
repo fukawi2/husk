@@ -106,6 +106,8 @@ my $qr_kw_sport		= qr/\bsource\s+port\s+(($qr_port_pattern:?)+)\b/io;
 my $qr_kw_dport		= qr/\b(dest(ination)?)?\s*port (($qr_port_pattern:?)+)\b/io;
 my $qr_kw_multisport= qr/\bsource\s+ports\s+(($qr_port_pattern,?)+)\b/io;
 my $qr_kw_multidport= qr/\b(dest(ination)?)?\s*ports\s+(($qr_port_pattern,?)+)\b/io;
+my $qr_quoted_string= qr/"([^"\\]++|\\.)*+"/o;
+my $qr_kw_prefix	= qr/\bprefix $qr_quoted_string/io;
 my $qr_kw_limit		= qr/\blimit (\S+)\s*(burst (\d+))?\b/io;
 my $qr_kw_type		= qr/\btype (\S+)\b/io;
 my $qr_time24		= qr/([0-1]?\d|2[0-3]):([0-5]\d)(:([0-5]\d))?/o;
@@ -985,6 +987,8 @@ sub compile_call {
 		{$criteria{'statistics_offset'} = $1};
 	if ($rule =~ s/$qr_kw_state//s)
 		{$criteria{'state'} = uc($1)};
+	if ($rule =~ s/$qr_kw_prefix//s)
+		{$criteria{'logprefix'} = uc($1)};
 	if ($rule =~ s/$qr_kw_limit//s)
 		{$criteria{'limit'} = lc($1);
 		 $criteria{'burst'} = $3}
@@ -1090,6 +1094,7 @@ sub compile_call {
 	$ipt_rule .= sprintf(' -m iprange --src-range %s',	$criteria{'srcrange'})	if (defined($criteria{'srcrange'}));
 	$ipt_rule .= sprintf(' -m iprange --dst-range %s',	$criteria{'dstrange'})	if (defined($criteria{'dstrange'}));
 	$ipt_rule .= sprintf(' -m time %s',					$criteria{'time'})		if (defined($criteria{'time'}));
+	$ipt_rule .= sprintf(' --log-prefix "[%s] "',		$criteria{'logprefix'})	if (defined($criteria{'logprefix'}));
 	$ipt_rule .= sprintf(' -m comment --comment "husk line %s"', $line_cnt);
 
 	PushRule:
