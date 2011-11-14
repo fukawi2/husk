@@ -1972,6 +1972,42 @@ Refer to the example rules below to see it in action (eg, the ICMP helper).
 
 To be completed.
 
+=head2 Targets
+
+Targets are the first part of any rule. They are be either a built-in (i.e.,
+accept, drop, reject, log) or the name of a 'define rules' written elsewhere
+in the rules file.
+
+=over 4
+
+=item * accept
+
+Packets matching this rule should be ACCEPTED
+
+=item * drop
+
+Packets matching this rule should be DROPPED. This makes the packet dissappear
+without any notification to the source address.
+
+=item * reject
+
+Packets matching this rule should be REJECTED. This sends an appropriate ICMP
+notification packet to the source address.
+
+=item * log
+
+Packets matching this rule should be sent to the kernel log. Specific options:
+
+=over 4
+
+=item * prefix "string"
+
+Log with a specific string for identification.
+
+=back
+
+=back
+
 =head2 EXAMPLES
 
 This set of example rules is for a simple firewall/router machine.
