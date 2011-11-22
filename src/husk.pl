@@ -820,15 +820,20 @@ sub close_rules {
 	}
 }
 
-sub generate_output {
-	# Always print license and disclaimer
+sub print_header {
 	print "#\n";
-	print "# husk, Copyright (C) 2010-2011 Phillip Smith\n";
+	printf("# husk version %s\n", $VERSION);
+	print "# Copyright (C) 2010-2011 Phillip Smith\n";
 	print "# This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are\n";
 	print "# welcome to use and redistribute it under the conditions of the GPL license version 2\n";
 	print "# See the \"COPYING\" file for further details.\n";
 	print "#\n";
-	printf "# Ruleset compiled %s\n", &timestamp;
+}
+
+sub generate_output {
+	# Always print license and disclaimer
+	&print_header;
+	printf("# Ruleset compiled %s\n", &timestamp);
 	print "#\n";
 
 	# iptables (IPv4) rules)
