@@ -595,18 +595,9 @@ sub close_rules {
 					$SPOOF_CHAIN,
 					$interface{$iface},
 				)) if ($do_ipv4);
-			# RETURN if the packet is to [ff02::1:2]:547 (DHCPv6 Discover)
-			# Refer: http://en.wikipedia.org/wiki/DHCPv6#Example
-			# Suppose that the Server's link-local address is fe80::0011:22ff:fe33:5566/64 and the client's link-local address is fe80::aabb:ccff:fedd:eeff/64.
-			#	DHCPv6 client sends a Solicit from [fe80::aabb:ccff:fedd:eeff]:546 for [ff02::1:2]:547.
-			#	DHCPv6 server replies with an Advertise from [fedd80::0011:22ff:fe33:5566]:547 for [fe80::aabb:ccff:fedd:eeff]:546.
-			#	DHCPv6 client replies with a Request from [fe80::aabb:ccff:fedd:eeff]:546 for [ff02::1:2]:547.
-			#	DHCPv6 server finishes with an Reply from [fe80::0011:22ff:fe33:5566]:547 for [fe80::aabb:ccff:fedd:eeff]:546.
-			&ipt6(sprintf('-t %s -A %s -i %s -s fe80::/10 -d ff02::1:2 -p udp --sport 546 --dport 547 -m comment --comment "DHCPv6 Discover bypasses spoof protection" -j RETURN',
-					$SPOOF_TABLE,
-					$SPOOF_CHAIN,
-					$interface{$iface},
-				)) if ($do_ipv6);
+
+			# RETURN if the packet is ip6 and src from link-local
+			push(@{$spoof_protection{$iface}}, 'fe80::/10') if ($do_ipv6);
 
 			# RETURN if the packet is from a known-good source (as specified by user)
 			foreach (@{$spoof_protection{$iface}}) {
