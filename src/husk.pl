@@ -144,7 +144,6 @@ my %IPV6_BOGON_SOURCES = (
 	'3fff:ffff::/32'	=> 'EXAMPLENET-WF',
 	'2001:0DB8::/32'	=> 'EXAMPLENET-WF',
 	'fec0::/10'			=> 'Site Local Addresses (RFC-3879)',
-	'fe80::/10'			=> 'Site Local Addresses (RFC-3879)',
 	'::/96'				=> 'Deprecated (RFC-4291)',
 	'::/128'			=> 'Unspecified address',
 	'::1/128'			=> 'Loopback',
