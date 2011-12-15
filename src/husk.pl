@@ -1504,14 +1504,14 @@ sub load_interfaces {
 			&bomb(sprintf('Bad config in "%s": %s', $fname, $line))
 		}
 
-        # make sure it's not already defined
-        $fname = &basename($fname);
-        &bomb(sprintf('Zone "%s" defined twice in "%s"', $name, $fname))
-            if ($interface{$name});
-        for my $i ( keys %interface ) {
+		# make sure it's not already defined
+		$fname = &basename($fname);
+		&bomb(sprintf('Zone "%s" defined twice in "%s"', $name, $fname))
+			if ($interface{$name});
+		for my $i ( keys %interface ) {
 			&bomb(sprintf('Interface "%s" named twice in "%s"', $int, $fname))
 				if ($interface{$i} =~ m/\A$int\z/);
-        }
+		}
 
 		# add to the hash
 		$interface{$name} = $int;
