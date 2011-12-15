@@ -1483,19 +1483,24 @@ sub load_interfaces {
 	# Validate what was passed
 	&bomb((caller(0))[3] . ' called without passing fname') unless $fname;
 
-	local(*FILE);
-	open FILE, "$fname" or &bomb("Failed to read $fname");
+	my @file_lines;
+	open(INTFILE, $fname) or &bomb("Failed to read $fname");
+	@file_lines = <INTFILE>;
+	close(INTFILE);
+
 	InterfacesLoop:
-	while (<FILE>) {
-		my($int, $name);
-		my $line = $_;
+	foreach my $line (@file_lines) {
 		chomp($line);
+		my($int, $name);
 
 		# strip comments
 		$line = &cleanup_line($line);
 
 		# ignore if the line is blank
 		next InterfacesLoop unless $line;
+
+		# strip the path from the input filename (for error messages)
+		my $short_fname = &basename($fname);
 
 		if ($line =~ m/$qr_NAME_ZONE/) {
 			$name	= uc($1);
@@ -1505,11 +1510,10 @@ sub load_interfaces {
 		}
 
 		# make sure it's not already defined
-		$fname = &basename($fname);
-		&bomb(sprintf('Zone "%s" defined twice in "%s"', $name, $fname))
+		&bomb(sprintf('Zone "%s" defined twice in "%s"', $name, $short_fname))
 			if ($interface{$name});
 		for my $i ( keys %interface ) {
-			&bomb(sprintf('Interface "%s" named twice in "%s"', $int, $fname))
+			&bomb(sprintf('Interface "%s" named twice in "%s"', $int, $short_fname))
 				if ($interface{$i} =~ m/\A$int\z/);
 		}
 
