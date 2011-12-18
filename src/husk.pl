@@ -1526,9 +1526,6 @@ sub load_interfaces {
 		unless ($interface{'ME'} =~ m/\Alo\z/);
 }
 
-###############################################################################
-#### SETUP/INIT SUBROUTINES
-###############################################################################
 sub handle_cmd_args {
 	GetOptions(
 		"c|conf=s"	=> \$conf_file,
