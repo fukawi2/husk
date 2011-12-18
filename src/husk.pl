@@ -465,7 +465,7 @@ sub new_call_chain {
 	# Build the Rule
 	&ipt("-N $chain");
 	$xzone_calls{$chain} = collapse_spaces(sprintf(
-		'-A %s %s %s %s -m state --state NEW -j %s -m comment --comment "husk line %s"',
+		'-A %s %s %s %s -m conntrack --ctstate NEW -j %s -m comment --comment "husk line %s"',
 		$criteria{'chain'},
 		$criteria{'module'} ? $criteria{'module'} : '',
 		$criteria{'in'},
@@ -675,7 +675,7 @@ sub close_rules {
 		# Jump the new chain for each required interface
 		foreach my $int (@syn_protection) {
 			&ipt(sprintf(
-				'-t %s -I PREROUTING -i %s -p tcp -m state --state NEW -j %s -m comment --comment "syn protection for %s"',
+				'-t %s -I PREROUTING -i %s -p tcp -m conntrack --ctstate NEW -j %s -m comment --comment "syn protection for %s"',
 				$SYN_PROT_TABLE,
 				$interface{$int},
 				$SYN_PROT_CHAIN,
@@ -1084,7 +1084,7 @@ sub compile_call {
 	$ipt_rule .= sprintf(' -m multiport --dports %s',	$criteria{'dpts'})		if (defined($criteria{'dpts'}));
 	$ipt_rule .= sprintf(' -m mac --mac-source %s',		$criteria{'mac'})		if (defined($criteria{'mac'}));
 	$ipt_rule .= sprintf(' -m limit --limit %s',		$criteria{'limit'})		if (defined($criteria{'limit'}));
-	$ipt_rule .= sprintf(' -m state --state %s',		$criteria{'state'})		if (defined($criteria{'state'}));
+	$ipt_rule .= sprintf(' -m conntrack --ctstate %s',	$criteria{'state'})		if (defined($criteria{'state'}));
 	$ipt_rule .= sprintf(' -m statistic %s',			$criteria{'statistic'})	if (defined($criteria{'statistic'}));
 	$ipt_rule .= sprintf(' -m iprange --src-range %s',	$criteria{'srcrange'})	if (defined($criteria{'srcrange'}));
 	$ipt_rule .= sprintf(' -m iprange --dst-range %s',	$criteria{'dstrange'})	if (defined($criteria{'dstrange'}));
@@ -1559,8 +1559,8 @@ sub init {
 
 	# add standard rules
 	foreach my $chain (qw(INPUT FORWARD OUTPUT)) {
-		&ipt(sprintf('-A %s -m state --state ESTABLISHED -j ACCEPT',	$chain));
-		&ipt(sprintf('-A %s -m state --state RELATED -j ACCEPT',		$chain));
+		&ipt(sprintf('-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT',	$chain));
+		&ipt(sprintf('-A %s -m conntrack --ctstate RELATED -j ACCEPT',		$chain));
 	}
 }
 
