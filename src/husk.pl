@@ -35,12 +35,14 @@ $conf_defaults{udc_prefix}		= 'tgt_';
 $conf_defaults{do_ipv4}			= 1;
 $conf_defaults{do_ipv6}			= 0;
 $conf_defaults{ignore_autoconf}	= 0;
+$conf_defaults{old_state_track}	= 0;
 
 # runtime vars
 my ($conf_file, $conf_dir, $udc_prefix, $kw);
 my ($iptables, $ip6tables);	# Paths to binaries
 my ($do_ipv4, $do_ipv6);	# Enable/Disable specific IP Versions
 my $ignore_autoconf;		# Ignore autoconf traffic before antispoof logging?
+my $old_state_track;		# Use 'state' module instead of 'conntrack'
 my $disable_ipv6_comments;	# Early versions of ip6tables didn't support the 'comment' module
 my $curr_chain;				# Name of current chain to append rules to
 my $current_rules_file;		# The filename of the rules currently being read (needs to be globally scoped to use in multiple subs)
@@ -829,8 +831,12 @@ sub generate_output {
 	# iptables (IPv4) rules)
 	if ($do_ipv4) {
 		print "### BEGIN IPv4 RULES ###\n";
-		foreach (@ipv4_rules) {
-			printf("%s %s\n", $iptables, $_);
+		foreach my $r (@ipv4_rules) {
+			if ($old_state_track == 1) {
+				$r =~ s/-m conntrack --ctstate/-m state --state/g;
+			}
+
+			printf("%s %s\n", $iptables, $r);
 		}
 		print "### END IPv4 RULES ###\n\n";
 	}
@@ -1427,6 +1433,7 @@ sub read_config_file {
 	$do_ipv4			= coalesce($config{'default.ipv4'}, 			$conf_defaults{do_ipv4});
 	$do_ipv6			= coalesce($config{'default.ipv6'}, 			$conf_defaults{do_ipv6});
 	$ignore_autoconf	= coalesce($config{'default.ignore_autoconf'},	$conf_defaults{ignore_autoconf});
+	$old_state_track	= coalesce($config{'default.old_state_track'},	$conf_defaults{old_state_track});
 	chomp($conf_dir);
 	chomp($iptables)			if ($iptables);
 	chomp($ip6tables)			if ($ip6tables);
@@ -1434,6 +1441,7 @@ sub read_config_file {
 	chomp($do_ipv4);
 	chomp($do_ipv6);
 	chomp($ignore_autoconf);
+	chomp($old_state_track);
 
 	# validate config
 	{
@@ -1904,6 +1912,13 @@ find this to be annoying and I don't want the anti-spoof rules to log this
 traffic. Setting c<ignore_autoconf> to 1 will add rules to the anti-spoof
 chains to silently DROP autoconfig traffic before those packets hit the LOG
 rules. This is a boolean value (1 or 0).
+
+=item C<old_state_track>
+
+By default, husk generated rules using the 'conntrack' module and the 'ctstate'
+flag when generating rules involving connection state. Some distributions still
+don't include the 'conntrack' / 'ctstate' option so you can override this
+behaviour by setting 'old_state_track' to 1. This is a boolean value (1 or 0).
 
 =item C<iptables>
 
