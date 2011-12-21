@@ -1468,7 +1468,7 @@ sub read_config_file {
 	foreach my $conf_key (keys %config) {
 		my ($section, $key) = split(/\./, $conf_key);
 		&bomb('Unknown setting in config file: '.$key)
-			unless ($conf_defaults{$key});
+			unless (defined($conf_defaults{$key}));
 	}
 }
 
