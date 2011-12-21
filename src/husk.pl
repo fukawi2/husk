@@ -1425,7 +1425,10 @@ sub read_config_file {
 		unless (-f $fname);
 
 	my $cfg = new Config::Simple($fname);
-	my %config = $cfg->vars();
+	my %config;
+	if ( $cfg ) {
+		%config = $cfg->vars();
+	}
 	$conf_dir			= coalesce($config{'default.conf_dir'},			$conf_defaults{conf_dir});
 	$iptables			= coalesce($config{'default.iptables'},			$conf_defaults{iptables});
 	$ip6tables			= coalesce($config{'default.ip6tables'},		$conf_defaults{ip6tables});
