@@ -32,8 +32,8 @@ $conf_defaults{conf_dir} 		= '/etc/husk';
 $conf_defaults{iptables}		= `which iptables 2>/dev/null`;
 $conf_defaults{ip6tables}		= `which ip6tables 2>/dev/null`;
 $conf_defaults{udc_prefix}		= 'tgt_';
-$conf_defaults{do_ipv4}			= 1;
-$conf_defaults{do_ipv6}			= 0;
+$conf_defaults{ipv4}			= 1;
+$conf_defaults{ipv6}			= 0;
 $conf_defaults{ignore_autoconf}	= 0;
 $conf_defaults{old_state_track}	= 0;
 
@@ -1430,8 +1430,8 @@ sub read_config_file {
 	$iptables			= coalesce($config{'default.iptables'},			$conf_defaults{iptables});
 	$ip6tables			= coalesce($config{'default.ip6tables'},		$conf_defaults{ip6tables});
 	$udc_prefix			= coalesce($config{'default.udc_prefix'}, 		$conf_defaults{udc_prefix});
-	$do_ipv4			= coalesce($config{'default.ipv4'}, 			$conf_defaults{do_ipv4});
-	$do_ipv6			= coalesce($config{'default.ipv6'}, 			$conf_defaults{do_ipv6});
+	$do_ipv4			= coalesce($config{'default.ipv4'}, 			$conf_defaults{ipv4});
+	$do_ipv6			= coalesce($config{'default.ipv6'}, 			$conf_defaults{ipv6});
 	$ignore_autoconf	= coalesce($config{'default.ignore_autoconf'},	$conf_defaults{ignore_autoconf});
 	$old_state_track	= coalesce($config{'default.old_state_track'},	$conf_defaults{old_state_track});
 	chomp($conf_dir);
@@ -1459,6 +1459,13 @@ sub read_config_file {
 			&bomb(sprintf('Could not find ip6tables binary: %s', $ip6tables ? $ip6tables : 'NOT FOUND'))
 				unless ($ip6tables and -x $ip6tables);
 		}
+	}
+
+	# anything we didn't understand?
+	foreach my $conf_key (keys %config) {
+		my ($section, $key) = split(/\./, $conf_key);
+		&bomb('Unknown setting in config file: '.$key)
+			unless ($conf_defaults{$key});
 	}
 }
 
