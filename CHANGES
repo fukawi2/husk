@@ -234,3 +234,18 @@ Merge branch 'master' of github.com:fukawi2/husk
 fixed default husk.conf file
 removal of magic constants to set config file defaults when reading conf file
 perl syntax errors in the last commit.
+* ==> Version 0.9.4
+add support for --log-prefix when using LOG target
+added some documentation to man page about TARGETS under RULE SYNTAX
+fix regex that matches quoted strings
+make header printing its own sub for reuse purposes
+fe80::/10 isnt site-local, it is link-local; not a bogon
+replace ipv6 anti-spoof dhcp bypass with generic link-local fe80::/10 bypass
+fix whitespace indenting
+cleanup reading of interfaces.conf
+fix bug in &basename function
+use "conntrack" module for state rules rather than "state" module
+remove redundant comment header
+allow revert to using 'state' module instead of 'conntrack' / 'ctstate'
+check for unknown configuration in husk.conf
+dont barf if the config file is empty or all comments; use defaults
