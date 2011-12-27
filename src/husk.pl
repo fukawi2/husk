@@ -89,6 +89,7 @@ my $qr_tgt_ip6tables= qr/\Aip6tables\b/io;
 my $qr_tgt_include	= qr/\Ainclude\b(.+)\z/io;
 my $qr_end_define	= qr/\Aend\s+define\b?\z/io;
 # regex precompilation for keyword matching and extraction
+my $qr_kw_ip		= qr/\bip\s+(4|6|both)\b/io;
 my $qr_kw_protocol	= qr/\bproto(col)? ([\w]+)\b/io;
 my $qr_kw_in_int	= qr/\bin(coming)? ($qr_int_name)\b/io;
 my $qr_kw_out_int	= qr/\bout(going)? ($qr_int_name)\b/io;
@@ -592,11 +593,13 @@ sub close_rules {
 
 		foreach my $iface (keys %spoof_protection) {
 			# RETURN if the packet is sourced from 0.0.0.0 (eg, DHCP Discover)
-			&ipt4(sprintf('-t %s -A %s -i %s -s 0.0.0.0 -p udp --sport 68 --dport 67 -m comment --comment "DHCP Discover bypasses spoof protection" -j RETURN',
+			if ( $do_ipv4 ) {
+				&ipt4(sprintf('-t %s -A %s -i %s -s 0.0.0.0 -p udp --sport 68 --dport 67 -m comment --comment "DHCP Discover bypasses spoof protection" -j RETURN',
 					$SPOOF_TABLE,
 					$SPOOF_CHAIN,
 					$interface{$iface},
-				)) if ($do_ipv4);
+				));
+			}
 
 			# RETURN if the packet is ip6 and src from link-local
 			push(@{$spoof_protection{$iface}}, 'fe80::/10') if ($do_ipv6);
@@ -918,7 +921,6 @@ sub compile_call {
 	}
 
 	my %criteria;		# Hash to store all the individual parts of this rule
-	my @addrs_to_check;	# Addresses that need to be tested for IPv4/IPv6
 
 	# Extract the individual parts of the rule into our hash
 	if ($rule =~ s/$qr_tgt_builtins//s) {
@@ -928,31 +930,27 @@ sub compile_call {
 		# assume it's a user defined target (chain)
 		$criteria{'target'} = sprintf('%s%s', $udc_prefix, $1);
 	}
+	if ($rule =~ s/$qr_kw_ip//s)
+		{$criteria{'ipver'} = lc($1)};
 	if ($rule =~ s/$qr_kw_protocol//s)
 		{$criteria{'proto'} = lc($2)};
 	if ($rule =~ s/$qr_kw_in_int//s)
 		{$criteria{'i_name'} = $interface{uc($2)}};
 	if ($rule =~ s/$qr_kw_out_int//s)
 		{$criteria{'o_name'} = $interface{uc($2)}};
-	if ($rule =~ s/$qr_kw_src_addr//s) {
-		push(@addrs_to_check, $1);
-		$criteria{'src'} = lc($1)};
-	if ($rule =~ s/$qr_kw_dst_addr//s) {
-		push(@addrs_to_check, $2);
-		$criteria{'dst'} = lc($2)};
+	if ($rule =~ s/$qr_kw_src_addr//s)
+		{$criteria{'src'} = lc($1)};
+	if ($rule =~ s/$qr_kw_dst_addr//s)
+		{$criteria{'dst'} = lc($2)};
 	if ($rule =~ s/$qr_kw_src_host//s)
 		{$criteria{'sgroup'} = $1};
 	if ($rule =~ s/$qr_kw_dst_host//s)
 		{$criteria{'dgroup'} = $2};
 	if ($rule =~ s/$qr_kw_src_range//s) {
 		my ($from, $to) = ($1, $2);
-		push(@addrs_to_check, $from);
-		push(@addrs_to_check, $to);
 		$criteria{'srcrange'} = "$from-$to"};
 	if ($rule =~ s/$qr_kw_dst_range//s) {
 		my ($from, $to) = ($2, $3);
-		push(@addrs_to_check, $from);
-		push(@addrs_to_check, $to);
 		$criteria{'dstrange'} = "$from-$to"};
 	if ($rule =~ s/$qr_kw_sport//s) {
 		my $port = lc($1);
@@ -1046,33 +1044,30 @@ sub compile_call {
 	}
 
 	# make a decision if the rule is IPv4, IPv6 or Both
-	my $rule_is_ipv4 = $do_ipv4;
-	my $rule_is_ipv6 = $do_ipv6;
-	# this next section is kinda messy, but it seems to work... Get things
-	# working first, then worry about making them pretty.
-	for my $addr (@addrs_to_check) {
-		$rule_is_ipv4 = 0;
-		$rule_is_ipv6 = 0;
-
-		# See if the address is an IP Address first
-		if ($addr =~ m/$qr_ip4_cidr(:(.+))?\b/) {
+	my $rule_is_ipv4 = 0;
+	my $rule_is_ipv6 = 0;
+	if ( defined($criteria{ipver}) ) {
+		# user specified what we're doing
+		if ( $criteria{ipver} eq '4' ) {
 			$rule_is_ipv4 = 1;
-			next;
-		}
-		if ($addr =~ m/$qr_ip6_cidr(:(.+))?\b/) {
+			$rule_is_ipv6 = 0;
+		} elsif ( $criteria{ipver} eq '6' ) {
+			$rule_is_ipv4 = 0;
 			$rule_is_ipv6 = 1;
-			next;
+		} elsif ( $criteria{ipver} =~ m/\Aboth\z/ ) {
+			$rule_is_ipv4 = $rule_is_ipv6 = 1;
 		}
 
-		# Looking up DNS hosts at compile time is fucking slow to the point of being
-		# annoying so if a hostname is supplied, we will make an IPv4 and an IPv6
-		# rule with it and let iptables worry about resolving it during load.
-		$rule_is_ipv4 = $do_ipv4;
-		$rule_is_ipv6 = $do_ipv6;
+		# conflicting information?
+		if ( $rule_is_ipv4 == 1 and ! $do_ipv4 )
+			{ bomb('Can not compile IPv4 rule when IPv4 is disabled'); }
+		if ( $rule_is_ipv6 == 1 and ! $do_ipv6 )
+			{ bomb('Can not compile IPv6 rule when IPv6 is disabled'); }
+	} else {
+		# default to ipv4
+		$rule_is_ipv4 = 1;
+		$rule_is_ipv6 = 0;
 	}
-	# check for sanity (as if thats even possible)
-	if ($rule_is_ipv4 and ! $do_ipv4 and ! $rule_is_ipv6) { &bomb('Rule requires IPv4 but IPv4 is disabled') }
-	if ($rule_is_ipv6 and ! $do_ipv6 and ! $rule_is_ipv4) { &bomb('Rule requires IPv6 but IPv6 is disabled') }
 
 	#############################################
 	# build the rule into an iptables command
@@ -1102,17 +1097,15 @@ sub compile_call {
 	{
 		my $added_something;	# Tracking success
 
-		# Try pushing IPv4 rule
-		if ($do_ipv4 and $rule_is_ipv4) {
+		# Push the rule
+		if ( $rule_is_ipv4 ) {
 			my $ipt4_rule = $ipt_rule;
 			if (defined($criteria{'icmp_type'})) {
 				$ipt4_rule .= sprintf(' -p icmp --icmp-type %s', $criteria{'icmp_type'});
 			};
 			$added_something += &ipt4($ipt4_rule);
 		}
-
-		# Try pushing IPv6 rule
-		if ($do_ipv6 and $rule_is_ipv6) {
+		if ($rule_is_ipv6) {
 			my $ipt6_rule = $ipt_rule;
 			if (defined($criteria{'icmp_type'})) {
 				$ipt6_rule .= sprintf(' -p icmpv6 --icmpv6-type %s', $criteria{'icmp_type'});
@@ -1121,11 +1114,13 @@ sub compile_call {
 		}
 
 		# Did we succeed?
-		&warn(sprintf(
+		unless ( $added_something ) {
+			&warn(sprintf(
 				"The following rule did NOT compile successfully:\n\tLine %u ==> %s",
 				$line_cnt,
 				$complete_rule,
-			)) unless $added_something;
+			));
+		}
 	}
 
 	return 1;
@@ -1210,10 +1205,10 @@ sub compile_interception {
 	$rule =~ s/$qr_tgt_redirect//s;
 	$rule =~ &cleanup_line($rule);
 
-	# These are just default values; they could be changed later on depending
-	# what we find in the rule.
-	my $rule_is_ipv4 = $do_ipv4;
-	my $rule_is_ipv6 = $do_ipv6;
+	if ( ! $do_ipv4 ) {
+		# can only nat ipv4
+		&bomb('redirect/intercept rules only available for ipv4');
+	}
 
 	# Hash to store all the individual parts of this rule
 	my %criteria;
@@ -1257,8 +1252,7 @@ sub compile_interception {
 		$criteria{'dpts'}		? "-m multiport --dports $criteria{'dpts'}"		: '',
 		$criteria{'port_redir'} ? "--to $criteria{'port_redir'}"	: '',
 	));
-	&ipt4($ipt_rule) if ($do_ipv4 and $rule_is_ipv4);
-	&ipt6($ipt_rule) if ($do_ipv6 and $rule_is_ipv6);
+	&ipt4($ipt_rule);
 }
 
 sub compile_common {
