@@ -2070,6 +2070,20 @@ This set of example rules is for a simple firewall/router machine.
 	common syn NET
 	common spoof LAN 10.0.0.0/24
 
+=head2 IPV6
+
+Rulesets default to IPv4 unless specified otherwise with the C<ip 6> or
+C<ip both> keywords:
+
+	define rules LAN to NET
+	# Allow IPv6 connections to ipv6.google.com
+	accept ip 6 protocol tcp ports http,https destination address ipv6.google.com
+	# Allow IPv4 and IPv6 connections to ipv6.internode.on.net
+	accept ip both protocol tcp ports http destination address ipv6.internode.on.net
+	end define
+
+Note: You must also enable IPv6 in your husk.conf file
+
 =head1 CAVEATS
 
 =over 4
