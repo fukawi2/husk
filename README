@@ -58,7 +58,9 @@ IMPORTANT NOTE: loopback ('lo') *must* be called the special name 'ME'.
 1. Common Firewalling
 husk has built-in 'common' firewall rules, prefixed with the keyword 'common'
     NAT:        common nat ZONE
-                Apply a Source NAT to traffic going out ZONE, usually 'NET'
+                Apply a Source NAT to traffic going out ZONE, usually 'NET'.
+				NOTE: This ONLY applies to IPv4 traffic. IPv6 does not support
+				NAT, by design.
                 eg: common nat NET
     SPOOF:      common spoof ZONE ADDRESS/PREFIX
                 Prevent address spoofing on the specified ZONE. ADDRESS/PREFIX
@@ -67,6 +69,8 @@ husk has built-in 'common' firewall rules, prefixed with the keyword 'common'
                 eg: common spoof LAN 10.0.0.0/24
                     common spoof LAN 10.0.1.0/24
                     common spoof DMZ 192.168.100.0/29
+				Don't forget to add one line for IPv4 and one line for IPv6 if
+				you are running a dual-stack network.
     BOGON:		common bogon ZONE
                 Block bogon traffic on the specified ZONE. Bogon traffic is
 				packets with source addresses that should never be seen outside
@@ -185,6 +189,7 @@ destination address:
 
 ===============================================================================
 7. Intercepting / Redirection
+IMPORTANT: This is only possible with IPv4 traffic. IPv6 does not support NAT.
 Using the 'trap' or 'redirect' keyword, you can silently redirect traffic to
 the local computer. This is useful for example to intercept all outgoing SMTP
 traffic to force it through the local SMTP gateway:
@@ -199,6 +204,7 @@ Redirecting to alternative ports is also possible:
 Directly writing iptables rules is also supported for putting your own rules in
 using iptables syntax:
     iptables -t raw -A OUTPUT -d 10.0.0.0/8 -j NOTRACK
+    ip6tables -t raw -A OUTPUT -d ::1 -j ACCEPT
 
 ===============================================================================
 9. Includes
@@ -223,7 +229,7 @@ There is NO PROTECTION against this.
 
     COPYRIGHT and LICENSE
 
-husk is Copyright (C) 2010-2011 Phillip Smith <fukawi2 (at) gmail (dot) com>
+husk is Copyright (C) 2010-2012 Phillip Smith <fukawi2 (at) gmail (dot) com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
