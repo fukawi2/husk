@@ -1058,9 +1058,9 @@ sub compile_call {
 		}
 
 		# conflicting information?
-		if ( $rule_is_ipv4 == 1 and ! $do_ipv4 )
+		if ( $rule_is_ipv4 == 1 and ! $rule_is_ipv6 and ! $do_ipv4 )
 			{ bomb('Can not compile IPv4 rule when IPv4 is disabled'); }
-		if ( $rule_is_ipv6 == 1 and ! $do_ipv6 )
+		if ( $rule_is_ipv6 == 1 and ! $rule_is_ipv4 and ! $do_ipv6 )
 			{ bomb('Can not compile IPv6 rule when IPv6 is disabled'); }
 	} else {
 		# default to ipv4
@@ -1097,14 +1097,14 @@ sub compile_call {
 		my $added_something;	# Tracking success
 
 		# Push the rule
-		if ( $rule_is_ipv4 ) {
+		if ( $rule_is_ipv4 and $do_ipv4 ) {
 			my $ipt4_rule = $ipt_rule;
 			if ( defined($criteria{icmp_type}) ) {
 				$ipt4_rule .= sprintf(' -p icmp --icmp-type %s', $criteria{icmp_type});
 			};
 			$added_something += ipt4($ipt4_rule);
 		}
-		if ( $rule_is_ipv6 ) {
+		if ( $rule_is_ipv6 and $do_ipv6 ) {
 			my $ipt6_rule = $ipt_rule;
 			if ( defined($criteria{icmp_type}) ) {
 				$ipt6_rule .= sprintf(' -p icmpv6 --icmpv6-type %s', $criteria{icmp_type});
