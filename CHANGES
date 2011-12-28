@@ -249,3 +249,12 @@ remove redundant comment header
 allow revert to using 'state' module instead of 'conntrack' / 'ctstate'
 check for unknown configuration in husk.conf
 dont barf if the config file is empty or all comments; use defaults
+* ==> Version 0.9.5
+fixed bug when checking for unknown config file options
+rework of ipv6 support.
+updated man docs for ipv6 changes
+general mass cleanup of code
+fix small typos
+remove src/IPTables::Rule.pl
+fix bug when ipv6 is disabled
+updates for ipv6 mods
