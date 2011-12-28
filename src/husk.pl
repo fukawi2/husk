@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright (C) 2010-2011 Phillip Smith
+# Copyright (C) 2010-2012 Phillip Smith
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -818,7 +818,7 @@ sub close_rules {
 sub print_header {
 	print "#\n";
 	printf("# husk version %s\n", $VERSION);
-	print "# Copyright (C) 2010-2011 Phillip Smith\n";
+	print "# Copyright (C) 2010-2012 Phillip Smith\n";
 	print "# This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are\n";
 	print "# welcome to use and redistribute it under the conditions of the GPL license version 2\n";
 	print "# See the \"COPYING\" file for further details.\n";
@@ -2115,7 +2115,7 @@ Thanks to Mike Sampson for his assistance in adding and testing IPv6 support.
 
 =head1 LICENSE
 
-Copyright 2010-2011 Phillip Smith
+Copyright 2010-2012 Phillip Smith
 
 Made available under the conditions of the GPLv2. This is free software; refer
 to the F<LICENSE> file for details.

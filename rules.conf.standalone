@@ -6,26 +6,30 @@
 include helpers/icmp.conf
 
 define rules SSH_ALLOWED
-accept source address home.example.com
-accept source address work.example.com
-reject all
+accept ip 4 source address home.example.com		# Only IPv4 from home.example.com
+accept ip both source address work.example.com	# IPv4 and IPv6 from work.example.com
+accept ip 6 2001:55cc:4141::2652:9338			# IPv6 Host
+accept ip 6 2001:55cc:4141:d1d4::/64			# IPv6 Subnet
+reject ip both all
 end define
 
 define rules NET to ME
-accept protocol udp ports ntp,domain
-accept protocol tcp ports smtp,domain
-accept protocol tcp ports http,https
-SSH_ALLOWED protocol tcp port ssh
+accept ip both protocol udp ports ntp,domain
+accept ip both protocol tcp ports smtp,domain
+accept ip both protocol tcp ports http,https
+SSH_ALLOWED ip both protocol tcp port ssh
 end define
 
 define rules OUTPUT
-accept all
+accept ip both
 end define
 
 define rules INPUT
-ICMP all protocol icmp
-drop protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
-drop protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
+ICMP ip 4 protocol icmp
+ICMP6 ip 6 protocol icmpv6
+#
+drop ip both protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
+drop ip both protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
 end define
 
 # Standard stuff

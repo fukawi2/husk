@@ -1,41 +1,50 @@
 include helpers/icmp.conf
+include helpers/icmpv6.conf
 include helpers/gotomeeting.conf
 include helpers/samba.conf
 
 define rules LAN to NET
 GOTOMEETING source address 192.168.100.100
 SAMBA destination address cifs.example.com
-accept all	# Allow everything from local network
+accept ip both dest address ipv6.internode.on.net
+accept ip 6 dest address ipv6.google.com
+accept all ip both	# Allow everything from local network
 end define
 
 define rules LAN to ME
-accept protocol tcp ports ssh,smtp,domain
-accept protocol udp ports ntp,domain
-accept protocol udp ports bootps,bootpc	# Allow clients to DHCP
+accept ip both protocol tcp ports ssh,smtp,domain
+accept ip both protocol udp ports ntp,domain
+accept ip 4 protocol udp ports bootps,bootpc	# Allow clients to DHCPv4
 end define
 
 define rules INPUT
-ICMP all protocol icmp
-drop protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
-drop protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
+ICMP ip 4 protocol icmp
+ICMP6 ip 6 protocol icmpv6
+#
+drop ip both protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
+drop ip both protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
 end define
 
 define rules OUTPUT
-reject state new protocol tcp port 6667:6669	# No IRC from this box
-accept all
+reject ip both state new protocol tcp port 6667:6669	# No IRC from this box
+log prefix "GOOGLE" destination address www.google.com.au
+log prefix "GOOGLE" ip 6 destination address ipv6.google.com
+accept all ip both
 end define
 
 define rules FORWARD
-ICMP all protocol icmp
-drop protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
-drop protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
+ICMP ip 4 protocol icmp
+ICMP6 ip 6 protocol icmpv6
+#
+drop ip both protocol tcp ports 135,137,138,139,445	# ignore annoying windows traffic
+drop ip both protocol udp ports 135,137,138,139,445	# ignore annoying windows traffic
 # Allow bounce routing
-accept in LAN out LAN
+accept ip both in LAN out LAN
 end define
 
 # Standard stuff
 common loopback
-common nat NET
+common nat NET		# Note: IPv4 only; IPv6 has no NAT support (by design)
 common bogon NET
 common portscan NET
 common xmas NET
