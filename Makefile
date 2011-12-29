@@ -14,8 +14,9 @@ D_HELPERS=$(D_CNF)/helpers
 
 ### Lists of files to be installed
 F_CONF=husk.conf interfaces.conf addr_groups.conf
-F_HELPERS=icmp.conf samba.conf apple-ios.conf avg.conf dhcp.conf mail.conf \
-		  dns.conf snmp.conf sql.conf gotomeeting.conf pptp.conf
+F_HELPERS=icmp.conf icmpv6.conf samba.conf apple-ios.conf avg.conf dhcp.conf \
+		  dhcpv6.conf mail.conf dns.conf snmp.conf sql.conf gotomeeting.conf \
+		  pptp.conf
 F_DOCS=ABOUT README rules.conf.simple rules.conf.standalone LICENSE
 
 fb_dir=.husk-fallback-$(shell date +%Y%m%d%H%M%S)
