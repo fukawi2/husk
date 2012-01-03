@@ -258,3 +258,10 @@ fix small typos
 remove src/IPTables::Rule.pl
 fix bug when ipv6 is disabled
 updates for ipv6 mods
+* ==> Version 0.9.6
+updated dhcpv6 helper to include FF05::1:3 dest addr
+fix ipv6 helpers and Makefile
+remove dhcpv4 helper from dhcpv6 file
+added helper for NFS
+expand icmpv6 helper with reference to RFC 4890
+added nfs.conf to Makefile
