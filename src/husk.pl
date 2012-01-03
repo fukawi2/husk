@@ -600,6 +600,14 @@ sub close_rules {
 					$interface{$iface},
 				));
 			}
+			# RETURN if the packet is sourced from Unspecified (::) to a multicast addr (valid in ipv6)
+			if ( $do_ipv6 ) {
+				&ipt6(sprintf('-t %s -A %s -i %s -s :: -d ff00::/8 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
+					$SPOOF_TABLE,
+					$SPOOF_CHAIN,
+					$interface{$iface},
+				));
+			}
 
 			# RETURN if the packet is ip6 and src from link-local
 			push(@{$spoof_protection{$iface}}, 'fe80::/10') if ( $do_ipv6 );
