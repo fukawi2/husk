@@ -600,6 +600,14 @@ sub close_rules {
 					$interface{$iface},
 				));
 			}
+			# RETURN if the packet is sourced from Unspecified (0.0.0.0) to a multicast addr
+			if ( $do_ipv4 ) {
+				&ipt4(sprintf('-t %s -A %s -i %s -s 0.0.0.0 -d 224.0.0.0/4 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
+					$SPOOF_TABLE,
+					$SPOOF_CHAIN,
+					$interface{$iface},
+				));
+			}
 			# RETURN if the packet is sourced from Unspecified (::) to a multicast addr (valid in ipv6)
 			if ( $do_ipv6 ) {
 				&ipt6(sprintf('-t %s -A %s -i %s -s :: -d ff00::/8 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
