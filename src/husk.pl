@@ -862,12 +862,12 @@ sub generate_output {
 	# ip6tables (IPv6) rules
 	if ( $do_ipv6 ) {
 		print "### BEGIN IPv6 RULES ###\n";
-		foreach ( @ipv6_rules ) {
+		foreach my $r ( @ipv6_rules ) {
 			if ( $old_state_track == 1 ) {
 				$r =~ s/-m conntrack --ctstate/-m state --state/g;
 			}
 
-			printf("%s %s\n", $ip6tables, $_);
+			printf("%s %s\n", $ip6tables, $r);
 		}
 		print "### END IPv6 RULES ###\n\n";
 	}
