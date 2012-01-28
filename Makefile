@@ -77,9 +77,10 @@ test:
 bin: test src/$(PROJECT).pl src/fire.sh
 
 docs: $(F_DOCS)
-	pod2man --name=husk src/husk.pl husk.1.man
-	pod2man --name=fire fire.pod fire.1.man
-	pod2man --name=husk.conf husk.conf.pod husk.conf.5.man
+	# build man Pages
+	pod2man --name=husk man/husk.pod husk.1.man
+	pod2man --name=fire man/fire.pod fire.1.man
+	pod2man --name=husk.conf man/husk.conf.pod husk.conf.5.man
 
 config: $(F_CONF)
 	# Install Distribution Helper Rule Files
