@@ -1891,70 +1891,8 @@ Show the version and exit.
 
 =head1 CONFIGURATION
 
-By default, configuration lives in C</etc/husk/husk.conf>. This is your normal
-style configuration with key = value options. Comments are supported and begin
-with a hash (#) continuing to the end of the line.
-
-The following directives are supported:
-
-=over 4
-
-=item C<conf_dir> = /etc/husk/
-
-Location where configuration, rules etc are found. Not very well tested so it's
-probably best to just leave it as the default by commenting this option
-completely.
-
-=item C<rules_file> = rules.conf
-
-The filename of your rules. You could have several sets of rules (rules1.conf
-to rulesN.conf) and switch between them by changing this configuration option.
-
-=item C<udc_prefix>
-
-This prefix is prefixed to User-Defined Chains (UDC) that husk generates. This
-applies to any chains created using a 'define rules' block that isn't a
-cross-zone match. For example, 'define rules BLACKLIST' will be called
-'prefix_BLACKLIST', by default 'sbrt_BLACKLIST'. Having a common prefix helps
-sort output and identify generated rules, as well as avoid potential name
-collisions with in-built chains.
-
-=item C<ipv4>
-
-A boolean value (1 or 0) to set if husk should generate output for IPv4 (eg,
-iptables).
-
-=item C<ipv6>
-
-A boolean value (1 or 0) to set if husk should generate output for IPv6 (eg,
-ip6tables).
-
-=item C<ignore_autoconf>
-
-Sometimes devices like to autoconfigure themselves using RFC3927. Personally I
-find this to be annoying and I don't want the anti-spoof rules to log this
-traffic. Setting c<ignore_autoconf> to 1 will add rules to the anti-spoof
-chains to silently DROP autoconfig traffic before those packets hit the LOG
-rules. This is a boolean value (1 or 0).
-
-=item C<old_state_track>
-
-By default, husk generated rules using the 'conntrack' module and the 'ctstate'
-flag when generating rules involving connection state. Some distributions still
-don't include the 'conntrack' / 'ctstate' option so you can override this
-behaviour by setting 'old_state_track' to 1. This is a boolean value (1 or 0).
-
-=item C<iptables>
-
-The path to iptables binary on your system. Usually C</sbin/iptables> or
-C</usr/sbin/iptables> depending on your distribution.
-
-=item C<ip6tables>
-
-The path to ip6tables binary on your system. Usually C</sbin/ip6tables> or
-C</usr/sbin/ip6tables> depending on your distribution.
-
-=back
+By default, configuration lives in C</etc/husk/husk.conf>. Refer to man page
+L<husk.conf> for full description of configuration file.
 
 =head1 EXAMPLES
 
