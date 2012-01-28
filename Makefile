@@ -33,9 +33,14 @@ install: test bin docs config
 	for f in $(F_DOCS) ; do \
 		install -D -m 0644 $$f $(DESTDIR)$(D_DOC)/$$f || exit 1 ; \
 	done
+	# ...man pages
 	install -Dm0644 husk.1.man $(DESTDIR)$(D_MAN)/man1/husk.1p
 	install -Dm0644 fire.1.man $(DESTDIR)$(D_MAN)/man1/fire.1p
 	install -Dm0644 husk.conf.5.man $(DESTDIR)$(D_MAN)/man5/husk.conf.5p
+	# ...html docs
+	install -Dm0644 man.husk.html $(DESTDIR)$(D_DOC)/husk.html
+	install -Dm0644 man.fire.html $(DESTDIR)$(D_DOC)/fire.html
+	install -Dm0644 man.husk.conf.html $(DESTDIR)$(D_DOC)/husk.conf.html
 
 fallback:
 	mkdir $(fb_dir)
@@ -77,10 +82,15 @@ test:
 bin: test src/$(PROJECT).pl src/fire.sh
 
 docs: $(F_DOCS)
-	# build man Pages
+	# build man pages
 	pod2man --name=husk man/husk.pod husk.1.man
 	pod2man --name=fire man/fire.pod fire.1.man
 	pod2man --name=husk.conf man/husk.conf.pod husk.conf.5.man
+
+	# build html pages
+	pod2html --infile=man/husk.pod > man.husk.html
+	pod2html --infile=man/fire.pod > man.fire.html
+	pod2html --infile=man/husk.conf.pod > man.husk.conf.html
 
 config: $(F_CONF)
 	# Install Distribution Helper Rule Files
