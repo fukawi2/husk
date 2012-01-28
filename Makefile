@@ -19,7 +19,7 @@ F_HELPERS=icmp.conf icmpv6.conf samba.conf apple-ios.conf avg.conf dhcp.conf \
 		  pptp.conf nfs.conf
 F_DOCS=ABOUT README rules.conf.simple rules.conf.standalone LICENSE
 
-fb_dir=.husk-fallback-$(shell date +%Y%m%d%H%M%S)
+fb_dir=.fallback-$(shell date +%Y%m%d%H%M%S)
 
 ###############################################################################
 
@@ -43,9 +43,17 @@ fallback:
 	for f in $(F_DOCS) ; do \
 		cp $(DESTDIR)$(D_DOC)/$$f $(fb_dir)/ || exit 1 ; \
 	done
-	@echo "IF THE NEXT COMMANDS FAIL, THAT IS OK"
-	@cp $(DESTDIR)$(D_MAN)/man1/husk.1p $(fb_dir)/ || true
-	@cp $(DESTDIR)$(D_MAN)/man1/fire.1p $(fb_dir)/ || true
+
+	# The next commands could fail if the user hasn't actually created these files
+	# so stderr is redirected to /dev/null
+	cp $(DESTDIR)$(D_MAN)/man1/husk.1p $(fb_dir)/ 2> /dev/null || true
+	cp $(DESTDIR)$(D_MAN)/man1/fire.1p $(fb_dir)/ 2> /dev/null || true
+	cp $(DESTDIR)$(D_CONF)/rules.conf $(fb_dir)/ 2> /dev/null || true
+	for f in $(F_CNF) ; do \
+		cp $(DESTDIR)$(D_CNF)/$$f $(fb_dir)/ 2> /dev/null || true ; \
+	done
+
+	@echo "Fallback has been created in $(fb_dir)"
 
 test:
 	@echo "==> Checking for required external dependencies"
