@@ -110,8 +110,10 @@ config: $(F_CONF)
 
 uninstall:
 	rm -f $(DESTDIR)$(D_MAN)/man1/husk.1p
+	rm -f $(DESTDIR)$(D_MAN)/man1/fire.1p
+	rm -f $(DESTDIR)$(D_MAN)/man5/husk.conf.5p
 	rm -f $(DESTDIR)$(D_BIN)/$(PROJECT)
 	rm -f $(DESTDIR)$(D_BIN)/fire
 	rm -f $(DESTDIR)$(D_DOC)/*
 	rmdir $(DESTDIR)$(D_DOC)/
-	echo "Leaving '$(DESTDIR)$(D_CNF)' untouched"
+	@echo "Leaving '$(DESTDIR)$(D_CNF)' untouched"
