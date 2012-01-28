@@ -27,7 +27,7 @@ B<DON'T MAKE A HABIT OF USING THIS!>
 
 =head2 Reporting Bugs
 
-Email bug reports to <fukawi2@gmail.com>
+Email bug reports to L<fukawi2@gmail.com|mailto://fukawi2@gmail.com>
 
 =head2 Known Bugs
 
@@ -48,9 +48,9 @@ to the F<LICENSE> file for details.
 
 =head1 AVAILABILITY
 
-<http://www.huskfw.info/>
+L<http://www.huskfw.info/>
 
-<http://github.com/fukawi2/husk/>
+L<http://github.com/fukawi2/husk/>
 
 =head1 AUTHOR
 
