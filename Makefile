@@ -42,6 +42,11 @@ install: test bin docs config
 	install -Dm0644 man.fire.html $(DESTDIR)$(D_DOC)/fire.html
 	install -Dm0644 man.husk.conf.html $(DESTDIR)$(D_DOC)/husk.conf.html
 
+clean:
+	rm -f *.?.man
+	rm -f man.*.html
+	rm -f pod2htm*.tmp
+
 fallback:
 	mkdir $(fb_dir)
 	cp $(DESTDIR)$(D_BIN)/$(PROJECT) $(fb_dir)/
