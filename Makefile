@@ -35,6 +35,7 @@ install: test bin docs config
 	done
 	install -Dm0644 husk.1.man $(DESTDIR)$(D_MAN)/man1/husk.1p
 	install -Dm0644 fire.1.man $(DESTDIR)$(D_MAN)/man1/fire.1p
+	install -Dm0644 husk.conf.5.man $(DESTDIR)$(D_MAN)/man5/husk.conf.5p
 
 fallback:
 	mkdir $(fb_dir)
@@ -48,6 +49,7 @@ fallback:
 	# so stderr is redirected to /dev/null
 	cp $(DESTDIR)$(D_MAN)/man1/husk.1p $(fb_dir)/ 2> /dev/null || true
 	cp $(DESTDIR)$(D_MAN)/man1/fire.1p $(fb_dir)/ 2> /dev/null || true
+	cp $(DESTDIR)$(D_MAN)/man5/husk.conf.5p $(fb_dir)/ 2> /dev/null || true
 	cp $(DESTDIR)$(D_CONF)/rules.conf $(fb_dir)/ 2> /dev/null || true
 	for f in $(F_CNF) ; do \
 		cp $(DESTDIR)$(D_CNF)/$$f $(fb_dir)/ 2> /dev/null || true ; \
@@ -77,6 +79,7 @@ bin: test src/$(PROJECT).pl src/fire.sh
 docs: $(F_DOCS)
 	pod2man --name=husk src/husk.pl husk.1.man
 	pod2man --name=fire fire.pod fire.1.man
+	pod2man --name=husk.conf husk.conf.pod husk.conf.5.man
 
 config: $(F_CONF)
 	# Install Distribution Helper Rule Files
