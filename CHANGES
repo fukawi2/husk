@@ -265,3 +265,13 @@ remove dhcpv4 helper from dhcpv6 file
 added helper for NFS
 expand icmpv6 helper with reference to RFC 4890
 added nfs.conf to Makefile
+* ==> Version 0.9.7
+removed some broken rules from icmpv6 helper
+bypass spoof protection from unspecified to multicast addresses
+bypass spoof protection from multicast traffic
+bypass spoof protection for multicast traffic
+Merge branch 'master' of github.com:fukawi2/husk
+make sure ad helper calls samba helper for ipv4 and ipv6
+active directory "dynamic port range" includes udp as well as tcp
+fix bug that didnt use old state tracking with ipv6 rules
+fixed syntax error in last bug fix
