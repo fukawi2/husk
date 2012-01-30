@@ -33,7 +33,7 @@ trap "rm -f $TFILE; rm -f $SFILE" EXIT 1 2 3 4 5 6 7 8 10 11 12 13 14 15
 
 # Check we've got all our dependencies
 export PATH='/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin'
-for ebin in iptables-save iptables-restore husk mktemp cat grep logger ; do
+for ebin in iptables-save iptables-restore husk mktemp cat grep logger printf ; do
 	[[ -z "$(which $ebin 2>/dev/null)" ]] && { echo "Could not locate '$ebin'" >&2; exit 1; }
 done
 TFILE=$(mktemp -t husk-fire.XXX)
@@ -97,6 +97,14 @@ if [ "${args[0]}" != '--no-confirm' ] ; then
 			;;
 	esac
 fi
+
+# user feedback
+ip4chains=$( ( for T in filter nat mangle raw ; do iptables -t $T -Sn ; done )  | grep -Pc '^-N' )
+ip6chains=$( ( for T in filter mangle raw ;     do ip6tables -t $T -Sn ; done ) | grep -Pc '^-N' )
+ip4rules=$( ( for T in filter nat mangle raw ;  do iptables -t $T -Sn ; done )  | grep -Pc '^-A' )
+ip6rules=$( ( for T in filter mangle raw ;      do ip6tables -t $T -Sn ; done ) | grep -Pc '^-A' )
+printf 'IPv4: %u rules in %u chains.\n' $ip4rules $ip4chains
+printf 'IPv6: %u rules in %u chains.\n' $ip6rules $ip6chains
 
 # Save to init script file if possible
 saved=0
