@@ -99,10 +99,10 @@ if [ "${args[0]}" != '--no-confirm' ] ; then
 fi
 
 # user feedback
-ip4chains=$( ( for T in filter nat mangle raw ; do iptables -t $T -Sn ; done )  | grep -Pc '^-N' )
-ip6chains=$( ( for T in filter mangle raw ;     do ip6tables -t $T -Sn ; done ) | grep -Pc '^-N' )
-ip4rules=$( ( for T in filter nat mangle raw ;  do iptables -t $T -Sn ; done )  | grep -Pc '^-A' )
-ip6rules=$( ( for T in filter mangle raw ;      do ip6tables -t $T -Sn ; done ) | grep -Pc '^-A' )
+ip4chains=$( ( for T in filter nat mangle raw ; do iptables -t $T -S ; done )  | grep -Pc '^-N' )
+ip6chains=$( ( for T in filter mangle raw ;     do ip6tables -t $T -S ; done ) | grep -Pc '^-N' )
+ip4rules=$( ( for T in filter nat mangle raw ;  do iptables -t $T -S ; done )  | grep -Pc '^-A' )
+ip6rules=$( ( for T in filter mangle raw ;      do ip6tables -t $T -S ; done ) | grep -Pc '^-A' )
 printf 'IPv4: %u rules in %u chains.\n' $ip4rules $ip4chains
 printf 'IPv6: %u rules in %u chains.\n' $ip6rules $ip6chains
 
