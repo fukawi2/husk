@@ -189,23 +189,23 @@ my @RESERVED_WORDS = (qw(
 ###############################################################################
 
 # Handle command line args
-&handle_cmd_args;
+handle_cmd_args();
 
 # read config files
 $conf_file = coalesce($conf_file, '/etc/husk/husk.conf');
-&read_config_file(fname=>$conf_file);
-&load_addrgroups(fname=>sprintf('%s/addr_groups.conf', $conf_dir));
-&load_interfaces(fname=>sprintf('%s/interfaces.conf', $conf_dir));
+read_config_file(fname=>$conf_file);
+load_addrgroups(fname=>sprintf('%s/addr_groups.conf', $conf_dir));
+load_interfaces(fname=>sprintf('%s/interfaces.conf', $conf_dir));
 
 # Start Processing
 {
-	&init;
+	init();
 	my $rules_fname = $conf_dir.'/'.$rules_file;
-	&read_rules_file($rules_fname);
-	&close_rules;
+	read_rules_file($rules_fname);
+	close_rules();
 
 	# Cleanup and Output
-	&generate_output;
+	generate_output();
 }
 
 exit 0;
@@ -299,7 +299,7 @@ sub read_rules_file {
 			# call rule - jump to built-in
 			bomb("Call rule found outside define block on line $line_cnt:\n\t$line")
 				unless ( $curr_chain );
-			&compile_call(chain=>$curr_chain, line=>$line);
+			compile_call(chain=>$curr_chain, line=>$line);
 		}
 		elsif ( $line =~ m/$qr_def_variable/ ) {
 			my $var_name = $2;
@@ -322,15 +322,15 @@ sub read_rules_file {
 			$in_def_variable = 1;
 		}
 		elsif ( $line =~ m/$qr_tgt_map/ ) {
-			&compile_nat($line);
+			compile_nat($line);
 		}
 		elsif ( $line =~ m/$qr_tgt_redirect/ ) {
 			# redirect/trap rule
-			&compile_interception($line);
+			compile_interception($line);
 		}
 		elsif ( $line =~ m/$qr_tgt_common/ ) {
 			# 'common' rule
-			&compile_common($line);
+			compile_common($line);
 		}
 		# note that we use s// on these comparisons to strip the leading string so
 		# the rest of the rule is ready to pass to ipt4() or ipt6()
@@ -344,7 +344,7 @@ sub read_rules_file {
 
 			$raw_rule =~ s/%CHAIN%/$curr_chain/;
 			$raw_rule = sprintf('%s -m comment --comment "husk line %s"', $raw_rule, $line_cnt);
-			&ipt4($raw_rule);
+			ipt4($raw_rule);
 		}
 		elsif ( $line =~ s/$qr_tgt_ip6tables// ) {
 			# raw ip6tables command
@@ -356,12 +356,12 @@ sub read_rules_file {
 
 			$raw_rule =~ s/%CHAIN%/$curr_chain/;
 			$raw_rule = sprintf('%s -m comment --comment "husk line %s"', $raw_rule, $line_cnt);
-			&ipt6($raw_rule);
+			ipt6($raw_rule);
 		}
 		elsif ( $line =~ m/$qr_tgt_include/ ) {
 			# include another rules file
 			my $include_fname = $1;
-			&include_file($include_fname);
+			include_file($include_fname);
 		}
 		elsif ( $line =~ m/$qr_end_define/ ) {
 			# End of a 'define' block; Clear our state and add default rule
@@ -370,7 +370,7 @@ sub read_rules_file {
 			bomb(sprintf('Found "%s" but not inside a "define" block?', $line))
 					unless ( $curr_chain or $in_def_variable );
 
-			&close_chain(chain=>$curr_chain, closing_tgt=>$closing_tgt)
+			close_chain(chain=>$curr_chain, closing_tgt=>$closing_tgt)
 					if ( $curr_chain );
 
 			undef($curr_chain);
@@ -389,7 +389,7 @@ sub read_rules_file {
 			my $udc_chain = sprintf('%s%s', $udc_prefix, $first_word);
 			if ( defined($udc_list{$udc_chain}) ) {
 				# call rule - jump to udc
-				&compile_call(chain=>$curr_chain, line=>$line);
+				compile_call(chain=>$curr_chain, line=>$line);
 			} else {
 				bomb(sprintf(
 					'Unknown command on line %s (perhaps a "define rules" block used before it is defined?):%s %s',
@@ -467,7 +467,7 @@ sub new_call_chain {
 	}
 
 	# Build the Rule
-	&ipt("-N $chain");
+	ipt("-N $chain");
 	$xzone_calls{$chain} = collapse_spaces(sprintf(
 		'-A %s %s %s %s -m conntrack --ctstate NEW -j %s -m comment --comment "husk line %s"',
 		$criteria{chain},
@@ -495,7 +495,7 @@ sub new_udc_chain {
 	# Store the UDC chain name with the line number for later
 	$udc_list{$chain} = $line_cnt;
 
-	&ipt("-N $chain");
+	ipt("-N $chain");
 
 	# Pass the chain name back
 	return $chain;
@@ -508,10 +508,10 @@ sub close_chain {
 
 	if ( $closing_tgt and $closing_tgt =~ m/DROP/ ) {
 		# Cross zone chain with DROP to close with.
-		&log_and_drop(chain=>$chain);
+		log_and_drop(chain=>$chain);
 	} elsif ( $closing_tgt ) {
 		# Cross zone chain with something other than 'DROP' as the closing action.
-		&ipt(sprintf('-A %s -j %s', $chain, $closing_tgt));
+		ipt(sprintf('-A %s -j %s', $chain, $closing_tgt));
 	} else {
 		# This is a UDC; We don't append anything
 		;
@@ -535,13 +535,13 @@ sub close_rules {
 	if ( scalar(@bogon_protection) ) {
 		# Bogon Protection; per interface
 		# Create a chain for bogon protection
-		&ipt(sprintf('-t %s -N %s', $BOGON_TABLE, $BOGON_CHAIN));
+		ipt(sprintf('-t %s -N %s', $BOGON_TABLE, $BOGON_CHAIN));
 
 		# Populate the new chain with rules
 		if ( $do_ipv4 ) {
 			foreach my $bogon_src (keys %IPV4_BOGON_SOURCES) {
 				# LOG and DROP bad sources (bogons)
-				&log_and_drop(
+				log_and_drop(
 					table=>		$BOGON_TABLE,
 					chain=>		$BOGON_CHAIN,
 					prefix=>	'BOGON',
@@ -554,12 +554,12 @@ sub close_rules {
 				));
 			}
 			# End with a default RETURN
-			&ipt4(sprintf('-t %s -A %s -j RETURN', $BOGON_TABLE, $BOGON_CHAIN));
+			ipt4(sprintf('-t %s -A %s -j RETURN', $BOGON_TABLE, $BOGON_CHAIN));
 		}
 		if ( $do_ipv6 ) {
 			foreach my $bogon_src (sort(keys %IPV6_BOGON_SOURCES)) {
 				# LOG and DROP bad sources (bogons)
-				&log_and_drop(
+				log_and_drop(
 					table=>		$BOGON_TABLE,
 					chain=>		$BOGON_CHAIN,
 					prefix=>	'BOGON',
@@ -572,12 +572,12 @@ sub close_rules {
 				));
 			}
 			# End with a default RETURN
-			&ipt6(sprintf('-t %s -A %s -j RETURN', $BOGON_TABLE, $BOGON_CHAIN));
+			ipt6(sprintf('-t %s -A %s -j RETURN', $BOGON_TABLE, $BOGON_CHAIN));
 		}
 
 		# Jump the new chain for packets in the user-specified interfaces
 		foreach my $int (@bogon_protection) {
-			&ipt(sprintf(
+			ipt(sprintf(
 				'-t %s -I PREROUTING -i %s -j %s -m comment --comment "bogon protection for %s"',
 				$BOGON_TABLE,
 				$interface{$int},
@@ -590,12 +590,12 @@ sub close_rules {
 	if ( scalar(keys %spoof_protection) ) {
 		# Antispoof rules; Per interface
 		# Create a chain to log and drop
-		&ipt(sprintf('-t %s -N %s', $SPOOF_TABLE, $SPOOF_CHAIN));
+		ipt(sprintf('-t %s -N %s', $SPOOF_TABLE, $SPOOF_CHAIN));
 
 		foreach my $iface (keys %spoof_protection) {
 			# RETURN if the packet is sourced from 0.0.0.0 (eg, DHCP Discover)
 			if ( $do_ipv4 ) {
-				&ipt4(sprintf('-t %s -A %s -i %s -s 0.0.0.0 -p udp --sport 68 --dport 67 -m comment --comment "DHCP Discover bypasses spoof protection" -j RETURN',
+				ipt4(sprintf('-t %s -A %s -i %s -s 0.0.0.0 -p udp --sport 68 --dport 67 -m comment --comment "DHCP Discover bypasses spoof protection" -j RETURN',
 					$SPOOF_TABLE,
 					$SPOOF_CHAIN,
 					$interface{$iface},
@@ -603,7 +603,7 @@ sub close_rules {
 			}
 			# RETURN if the packet is sourced from Unspecified (0.0.0.0) to a multicast addr
 			if ( $do_ipv4 ) {
-				&ipt4(sprintf('-t %s -A %s -i %s -s 0.0.0.0 -d 224.0.0.0/4 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
+				ipt4(sprintf('-t %s -A %s -i %s -s 0.0.0.0 -d 224.0.0.0/4 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
 					$SPOOF_TABLE,
 					$SPOOF_CHAIN,
 					$interface{$iface},
@@ -611,7 +611,7 @@ sub close_rules {
 			}
 			# RETURN if the packet is sourced from Unspecified (::) to a multicast addr (valid in ipv6)
 			if ( $do_ipv6 ) {
-				&ipt6(sprintf('-t %s -A %s -i %s -s :: -d ff00::/8 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
+				ipt6(sprintf('-t %s -A %s -i %s -s :: -d ff00::/8 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
 					$SPOOF_TABLE,
 					$SPOOF_CHAIN,
 					$interface{$iface},
@@ -626,7 +626,7 @@ sub close_rules {
 				my $src = $_;
 				if ( $src =~ m/$qr_ip4_cidr/ ) {
 					# User has supplied an IPv4 address
-					&ipt4(sprintf(
+					ipt4(sprintf(
 						'-t %s -A %s -i %s -s %s -m comment --comment "valid source for %s" -j RETURN',
 						$SPOOF_TABLE,
 						$SPOOF_CHAIN,
@@ -636,7 +636,7 @@ sub close_rules {
 				}
 				elsif ( $src =~ m/$qr_ip6_cidr/ ) {
 					# User has supplied an IPv6 address
-					&ipt6(sprintf(
+					ipt6(sprintf(
 						'-t %s -A %s -i %s -s %s -m comment --comment "valid source for %s" -j RETURN',
 						$SPOOF_TABLE,
 						$SPOOF_CHAIN,
@@ -647,14 +647,14 @@ sub close_rules {
 			}
 
 			# Silently DROP if the packet is from autoconfig addr and ignore_autoconf is true
-			&ipt4(sprintf('-t %s -A %s -i %s -s 169.254.0.0/16 -m comment --comment "prevent autoconfig addr being logged as spoofed" -j DROP',
+			ipt4(sprintf('-t %s -A %s -i %s -s 169.254.0.0/16 -m comment --comment "prevent autoconfig addr being logged as spoofed" -j DROP',
 				$SPOOF_TABLE,
 				$SPOOF_CHAIN,
 				$interface{$iface},
 			)) if ( $ignore_autoconf );
 
 			# LOG, then DROP anything else
-			&log_and_drop(
+			log_and_drop(
 				table=>		$SPOOF_TABLE,
 				chain=>		$SPOOF_CHAIN,
 				prefix=>	sprintf('SPOOFED in %s', $iface),
@@ -667,11 +667,11 @@ sub close_rules {
 			));
 		}
 		# End with a default RETURN
-		&ipt(sprintf('-t %s -A %s -j RETURN', $SPOOF_TABLE, $SPOOF_CHAIN));
+		ipt(sprintf('-t %s -A %s -j RETURN', $SPOOF_TABLE, $SPOOF_CHAIN));
 
 		# Jump the new chain for packets in the user-specified interfaces
 		foreach my $int (keys %spoof_protection) {
-			&ipt(sprintf('-t %s -I PREROUTING -i %s -j %s -m comment --comment "spoof protection for %s"',
+			ipt(sprintf('-t %s -I PREROUTING -i %s -j %s -m comment --comment "spoof protection for %s"',
 					$SPOOF_TABLE,
 					$interface{$int},
 					$SPOOF_CHAIN,
@@ -683,8 +683,8 @@ sub close_rules {
 	# SYN Protection
 	if ( scalar(@syn_protection) ) {
 		# Block NEW packets without SYN set
-		&ipt(sprintf('-t %s -N %s', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
-		&log_and_drop(
+		ipt(sprintf('-t %s -N %s', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
+		log_and_drop(
 			table=>		$SYN_PROT_TABLE,
 			chain=>		$SYN_PROT_CHAIN,
 			prefix=>	'NEW_NO_SYN',
@@ -692,11 +692,11 @@ sub close_rules {
 			ipv6=>		1,
 			criteria=>	'-p tcp ! --syn'
 		);
-		&ipt(sprintf('-t %s -A %s -j RETURN', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
+		ipt(sprintf('-t %s -A %s -j RETURN', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
 
 		# Jump the new chain for each required interface
 		foreach my $int (@syn_protection) {
-			&ipt(sprintf(
+			ipt(sprintf(
 				'-t %s -I PREROUTING -i %s -p tcp -m conntrack --ctstate NEW -j %s -m comment --comment "syn protection for %s"',
 				$SYN_PROT_TABLE,
 				$interface{$int},
@@ -709,8 +709,8 @@ sub close_rules {
 	# xmas Protection
 	if ( scalar(@xmas_protection) ) {
 		# Block Xmas Packets
-		&ipt(sprintf('-t %s -N %s', $XMAS_TABLE, $XMAS_CHAIN));
-		&log_and_drop(
+		ipt(sprintf('-t %s -N %s', $XMAS_TABLE, $XMAS_CHAIN));
+		log_and_drop(
 			table=>		$XMAS_TABLE,
 			chain=>		$XMAS_CHAIN,
 			prefix=>	'XMAS_LIGHT',
@@ -718,7 +718,7 @@ sub close_rules {
 			ipv6=>		1,
 			criteria=>	'-p tcp --tcp-flags ALL ALL'
 		);
-		&log_and_drop(
+		log_and_drop(
 			table=>		$XMAS_TABLE,
 			chain=>		$XMAS_CHAIN,
 			prefix=>	'XMAS_DARK',
@@ -726,9 +726,9 @@ sub close_rules {
 			ipv6=>		1,
 			criteria=>	'-p tcp --tcp-flags ALL NONE'
 		);
-		&ipt(sprintf('-t %s -A %s -j RETURN', $XMAS_TABLE, $XMAS_CHAIN));
+		ipt(sprintf('-t %s -A %s -j RETURN', $XMAS_TABLE, $XMAS_CHAIN));
 		foreach my $int (@xmas_protection) {
-			&ipt(sprintf(
+			ipt(sprintf(
 				'-t %s -I PREROUTING -i %s -j %s -m comment --comment "xmas protection for %s"',
 				$XMAS_TABLE,
 				$interface{$int},
@@ -741,13 +741,13 @@ sub close_rules {
 	if ( scalar(@portscan_protection) ) {
 		# Portscan Protection; per interface
 		# Create a chain for portscan protection
-		&ipt(sprintf('-t %s -N %s', $PORTSCAN_TABLE, $PORTSCAN_CHAIN));
+		ipt(sprintf('-t %s -N %s', $PORTSCAN_TABLE, $PORTSCAN_CHAIN));
 
 		# Populate the new chain with rules
 		foreach my $ps_rule (sort(keys %PORTSCAN_RULES)) {
 			# LOG and DROP things that look like portscans
 			my $scan_desc = $PORTSCAN_RULES{$ps_rule};
-			&log_and_drop(
+			log_and_drop(
 				table=>		$PORTSCAN_TABLE,
 				chain=>		$PORTSCAN_CHAIN,
 				prefix=>	$scan_desc,
@@ -760,11 +760,11 @@ sub close_rules {
 			));
 		}
 		# End with a default RETURN
-		&ipt(sprintf('-t %s -A %s -j RETURN', $PORTSCAN_TABLE, $PORTSCAN_CHAIN));
+		ipt(sprintf('-t %s -A %s -j RETURN', $PORTSCAN_TABLE, $PORTSCAN_CHAIN));
 
 		# Jump the new chain for packets in the user-specified interfaces
 		foreach my $int (@portscan_protection) {
-			&ipt(sprintf(
+			ipt(sprintf(
 				'-t %s -I PREROUTING -i %s -j %s -m comment --comment "portscan protection for %s"',
 				$PORTSCAN_TABLE,
 				$interface{$int},
@@ -788,7 +788,7 @@ sub close_rules {
 			# Create new chain
 			my $curr_chain = new_call_chain(line=>'none', in=>$int_from, out=>$int_to);
 			# Close it off
-			&close_chain(chain=>$curr_chain, closing_tgt=>'DROP');
+			close_chain(chain=>$curr_chain, closing_tgt=>'DROP');
 		}
 	}
 	undef($line_cnt);
@@ -798,11 +798,11 @@ sub close_rules {
 	my $any_to_me = sprintf('%s_ANY_ME', $xzone_prefix);
 	my $me_to_any = sprintf('%s_ME_ANY', $xzone_prefix);
 	if ( defined($xzone_calls{$any_to_me}) ) {
-		&ipt($xzone_calls{$any_to_me});
+		ipt($xzone_calls{$any_to_me});
 		delete $xzone_calls{$any_to_me};
 	}
 	if ( defined($xzone_calls{$me_to_any}) ) {
-		&ipt($xzone_calls{$me_to_any});
+		ipt($xzone_calls{$me_to_any});
 		delete $xzone_calls{$me_to_any};
 	}
 	# We want to jump any chains to/from the
@@ -810,25 +810,25 @@ sub close_rules {
 	# other 'call' jumps.
     foreach my $xzone_rule (sort(keys %xzone_calls)) {
 		if ( $xzone_rule =~ m/$qr_call_any/ ) {
-			&ipt($xzone_calls{$xzone_rule});
+			ipt($xzone_calls{$xzone_rule});
 			delete $xzone_calls{$xzone_rule};
 		}
 	}
 	# Jump whatever else is left
     foreach my $xzone_rule ( sort(keys %xzone_calls )) {
-		&ipt($xzone_calls{$xzone_rule});
+		ipt($xzone_calls{$xzone_rule});
 	}
 
 	# Create a LOG rule for anything that slips this far. This could
 	# happen with packets coming in an interface that has not been
 	# defined as a husk zone (ergo has no rules). This traffic will be
 	# DROPPED by the chain policy.
-	&log_and_drop(chain=>'INPUT',	prefix=>'LATE DROP');
-	&log_and_drop(chain=>'FORWARD',	prefix=>'LATE DROP');
+	log_and_drop(chain=>'INPUT',	prefix=>'LATE DROP');
+	log_and_drop(chain=>'FORWARD',	prefix=>'LATE DROP');
 
 	# Set policies
 	foreach my $chain (qw(INPUT FORWARD OUTPUT)) {
-		&ipt(sprintf('-P %s DROP', $chain));
+		ipt(sprintf('-P %s DROP', $chain));
 	}
 }
 
@@ -844,7 +844,7 @@ sub print_header {
 
 sub generate_output {
 	# Always print license and disclaimer
-	&print_header;
+	print_header;
 	printf("# Ruleset compiled %s\n", timestamp());
 	print "#\n";
 
@@ -888,21 +888,21 @@ sub log_and_drop {
 
 	if ( $ipv4 ) {
 		# LOG the packet
-		&ipt4(&collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
+		ipt4(collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
 				$table, $chain, $criteria, $log_prefix,
 			)));
 		# DROP the packet
-		&ipt4(&collapse_spaces(sprintf('%s -A %s %s -j DROP',
+		ipt4(collapse_spaces(sprintf('%s -A %s %s -j DROP',
 				$table, $chain, $criteria,
 			)));
 	}
 	if ( $ipv6 ) {
 		# LOG the packet
-		&ipt6(&collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
+		ipt6(collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
 				$table, $chain, $criteria, $log_prefix,
 			)));
 		# DROP the packet
-		&ipt6(&collapse_spaces(sprintf('%s -A %s %s -j DROP',
+		ipt6(collapse_spaces(sprintf('%s -A %s %s -j DROP',
 				$table, $chain, $criteria,
 			)));
 	}
@@ -935,7 +935,7 @@ sub compile_call {
 			my $var_value = $_;
 			my $recurse_rule = $rule;
 			$recurse_rule =~ s/\s%$var_name\b/ $var_value /;
-			&compile_call(chain=>$chain, line=>$recurse_rule);
+			compile_call(chain=>$chain, line=>$recurse_rule);
 		}
 		# No need to continue from here; Return early.
 		return 1;
@@ -1042,7 +1042,7 @@ sub compile_call {
 	}
 
 	# make sure we've understood everything on the line, otherwise BARF!
-	&unknown_keyword(rule=>$rule, complete_rule=>$complete_rule)
+	unknown_keyword(rule=>$rule, complete_rule=>$complete_rule)
 		if ( trim($rule) );
 
 	if ( $criteria{sgroup} or $criteria{dgroup} ) {
@@ -1058,7 +1058,7 @@ sub compile_call {
 			my $addr = $_;
 			my $recurse_rule = $complete_rule;
 			$recurse_rule =~ s/\bgroup $addrgrp\b/address $addr/gi;
-			&compile_call(chain=>$chain, line=>$recurse_rule);
+			compile_call(chain=>$chain, line=>$recurse_rule);
 		}
 		return 1;
 	}
@@ -1135,7 +1135,7 @@ sub compile_call {
 
 		# Did we succeed?
 		unless ( $added_something ) {
-			&warn(sprintf(
+			warn(sprintf(
 				"The following rule did NOT compile successfully:\n\tLine %u ==> %s",
 				$line_cnt,
 				$complete_rule,
@@ -1186,11 +1186,11 @@ sub compile_nat {
 		{ $criteria{port_int}	= $3 }
 
 	# make sure we've understood everything on the line, otherwise BARF!
-	&unknown_keyword(rule=>$rule, complete_rule=>$complete_rule)
+	unknown_keyword(rule=>$rule, complete_rule=>$complete_rule)
 		if ( trim($rule) );
 
 	# DNAT with the criteria defined
-	&ipt4(&collapse_spaces(sprintf(
+	ipt4(collapse_spaces(sprintf(
 			'-t nat -A PREROUTING %s %s %s %s %s %s %s -j DNAT %s%s',
 			$criteria{in}			? "-i $interface{$criteria{in}}"				: '',
 			$criteria{proto}		? "-p $criteria{proto}"							: '',
@@ -1203,7 +1203,7 @@ sub compile_nat {
 			$criteria{port_int}		? ":$criteria{port_int}"						: '',
 		)));
 	# SNAT with the criteria inversed (ie, dest become source and vice-versa)
-#	&ipt4(&collapse_spaces(sprintf(
+#	ipt4(collapse_spaces(sprintf(
 #			'-t nat -A POSTROUTING %s %s %s %s %s %s %s -j SNAT %s',
 #			$criteria{in}			? "-o $interface{$criteria{in}}"				: '',
 #			$criteria{proto}		? "-p $criteria{proto}"							: '',
@@ -1259,7 +1259,7 @@ sub compile_interception {
 		{$criteria{port_redir} = $1}
 
 	# make sure we've understood everything on the line, otherwise BARF!
-	&unknown_keyword($rule, $complete_rule) if ( trim($rule) );
+	unknown_keyword($rule, $complete_rule) if ( trim($rule) );
 
 	my $ipt_rule = collapse_spaces(sprintf(
 		'-t nat -A PREROUTING %s %s %s %s %s -j REDIRECT %s',
@@ -1272,7 +1272,7 @@ sub compile_interception {
 		$criteria{dpts}			? "-m multiport --dports $criteria{dpts}"	: '',
 		$criteria{port_redir}	? "--to $criteria{port_redir}"				: '',
 	));
-	&ipt4($ipt_rule);
+	ipt4($ipt_rule);
 }
 
 sub compile_common {
@@ -1305,13 +1305,13 @@ sub compile_common {
 			unless ( $interface{$snat_oeth} );
 
 		# Create a SNAT chain for this interface
-		&ipt4(sprintf('-t nat -N %s', $snat_chain));
+		ipt4(sprintf('-t nat -N %s', $snat_chain));
 
 		# Only specific sources?
 		my $snat_src;
 		if ( $line =~ s/\b(source|src)( address(es)?)?\s+($qr_ip4_cidr)\b//si ) {
 			$snat_src = $4;
-			&warn('common NAT rule found specifying source address; Not supported yet');
+			warn('common NAT rule found specifying source address; Not supported yet');
 		}
 
 		# Work out if we're SNAT'ing or MASQUERADING
@@ -1323,7 +1323,7 @@ sub compile_common {
 		# Add SNAT rules to the SNAT chain
 		if ( $snat_ip ) {
 			# User specified a SNAT address
-			&ipt4(&collapse_spaces(sprintf(
+			ipt4(collapse_spaces(sprintf(
 					'-t nat -A %s -j SNAT --to %s -m comment --comment "husk line %s"',
 					$snat_chain,
 					$snat_ip,
@@ -1337,7 +1337,7 @@ sub compile_common {
 			# HA is used, and there is a 'src' argument to tell
 			# the kernel to prefer the Virtual Address as the
 			# source.
-			&ipt4(&collapse_spaces(sprintf(
+			ipt4(collapse_spaces(sprintf(
 					'-t nat -A %s -j MASQUERADE -m comment --comment "husk line %s"',
 					$snat_chain,
 					$line_cnt,
@@ -1346,7 +1346,7 @@ sub compile_common {
 
 		# Call the snat chain from POSTROUTING for private addresses
 		foreach my $rfc1918 (qw(10.0.0.0/8 172.16.0.0/12 192.168.0.0/16)) {
-			&ipt4(sprintf('-t nat -A POSTROUTING -o %s -s %s -j %s -m comment --comment "husk line %s"',
+			ipt4(sprintf('-t nat -A POSTROUTING -o %s -s %s -j %s -m comment --comment "husk line %s"',
 					$interface{$snat_oeth},
 					$rfc1918,
 					$snat_chain,
@@ -1356,11 +1356,11 @@ sub compile_common {
 	}
 	elsif ( $line =~ m/$qr_CMN_LOOPBACK/ ) {
 		# loopback accept
-			&ipt(sprintf('-A INPUT -i lo -j ACCEPT -m comment --comment "husk line %s"', $line_cnt));
+			ipt(sprintf('-A INPUT -i lo -j ACCEPT -m comment --comment "husk line %s"', $line_cnt));
 			# Loopback is a different address between IPv4 and IPv6
-			&ipt4(sprintf('-A INPUT ! -i lo -s %s -j DROP -m comment --comment "husk line %s"', '127.0.0.0/8', $line_cnt));
-			&ipt6(sprintf('-A INPUT ! -i lo -s %s -j DROP -m comment --comment "husk line %s"', '::1/128', $line_cnt));
-			&ipt(sprintf('-A OUTPUT -o lo -j ACCEPT -m comment --comment "husk line %s"', $line_cnt));
+			ipt4(sprintf('-A INPUT ! -i lo -s %s -j DROP -m comment --comment "husk line %s"', '127.0.0.0/8', $line_cnt));
+			ipt6(sprintf('-A INPUT ! -i lo -s %s -j DROP -m comment --comment "husk line %s"', '::1/128', $line_cnt));
+			ipt(sprintf('-A OUTPUT -o lo -j ACCEPT -m comment --comment "husk line %s"', $line_cnt));
 	}
 	elsif ( $line =~ m/$qr_CMN_SYN/ ) {
 		# syn protections
@@ -1572,26 +1572,26 @@ sub handle_cmd_args {
 sub init {
 	# reset policies to ACCEPT
 	foreach my $chain (qw(INPUT OUTPUT FORWARD)) {
-		&ipt("-P $chain ACCEPT");
+		ipt("-P $chain ACCEPT");
 	}
 
 	# wipe everything so we know we are starting fresh. we use 2 loops here
 	# because IPv6 doesn't have a "nat" table.
 	foreach my $table (qw(filter nat mangle raw)) {
-		&ipt4("-t $table -F");	# Flush all rules in all chains
-		&ipt4("-t $table -X");	# Delete all user-defined chains
-		&ipt4("-t $table -Z");	# Reset counters
+		ipt4("-t $table -F");	# Flush all rules in all chains
+		ipt4("-t $table -X");	# Delete all user-defined chains
+		ipt4("-t $table -Z");	# Reset counters
 	}
 	foreach my $table (qw(filter mangle raw)) {
-		&ipt6("-t $table -F");	# Flush all rules in all chains
-		&ipt6("-t $table -X");	# Delete all user-defined chains
-		&ipt6("-t $table -Z");	# Reset counters
+		ipt6("-t $table -F");	# Flush all rules in all chains
+		ipt6("-t $table -X");	# Delete all user-defined chains
+		ipt6("-t $table -Z");	# Reset counters
 	}
 
 	# add standard rules
 	foreach my $chain (qw(INPUT FORWARD OUTPUT)) {
-		&ipt(sprintf('-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT',	$chain));
-		&ipt(sprintf('-A %s -m conntrack --ctstate RELATED -j ACCEPT',		$chain));
+		ipt(sprintf('-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT',	$chain));
+		ipt(sprintf('-A %s -m conntrack --ctstate RELATED -j ACCEPT',		$chain));
 	}
 }
 
@@ -1615,7 +1615,7 @@ sub include_file {
 	my $orig_line_count = $line_cnt;
 
 	# Parse the include file;
-	&read_rules_file($fname);
+	read_rules_file($fname);
 
 	# Restore our details
 	$line_cnt = $orig_line_count;
@@ -1646,8 +1646,8 @@ sub unknown_keyword {
 sub ipt {
 	# add a new rule for both IPv4 and IPv6
 	my ($line) = @_;
-	&ipt4($line);
-	&ipt6($line);
+	ipt4($line);
+	ipt6($line);
 }
 
 sub ipt4 {
