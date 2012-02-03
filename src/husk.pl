@@ -28,7 +28,8 @@ my $VERSION = '%VERSION%';
 
 # Configuration Defaults
 my %conf_defaults;
-$conf_defaults{conf_dir} 		= '/etc/husk';
+$conf_defaults{conf_dir}    = '/etc/husk';
+$conf_defaults{rules_file}  = 'rules.conf';
 $conf_defaults{iptables}		= `which iptables 2>/dev/null`;
 $conf_defaults{ip6tables}		= `which ip6tables 2>/dev/null`;
 $conf_defaults{udc_prefix}		= 'tgt_';
@@ -38,7 +39,7 @@ $conf_defaults{ignore_autoconf}	= 0;
 $conf_defaults{old_state_track}	= 0;
 
 # runtime vars
-my ($conf_file, $conf_dir, $udc_prefix, $kw);
+my ($conf_file, $conf_dir, $rules_file, $udc_prefix, $kw);
 my ($iptables, $ip6tables);	# Paths to binaries
 my ($do_ipv4, $do_ipv6);	# Enable/Disable specific IP Versions
 my $ignore_autoconf;		# Ignore autoconf traffic before antispoof logging?
@@ -199,7 +200,7 @@ $conf_file = coalesce($conf_file, '/etc/husk/husk.conf');
 # Start Processing
 {
 	&init;
-	my $rules_fname = sprintf('%s/rules.conf', $conf_dir);
+	my $rules_fname = $conf_dir.'/'.$rules_file;
 	&read_rules_file($rules_fname);
 	&close_rules;
 
@@ -1444,6 +1445,7 @@ sub read_config_file {
 		%config = $cfg->vars();
 	}
 	$conf_dir			= coalesce($config{'default.conf_dir'},			$conf_defaults{conf_dir});
+	$rules_file		= coalesce($config{'default.rules_file'},		$conf_defaults{rules_file});
 	$iptables			= coalesce($config{'default.iptables'},			$conf_defaults{iptables});
 	$ip6tables			= coalesce($config{'default.ip6tables'},		$conf_defaults{ip6tables});
 	$udc_prefix			= coalesce($config{'default.udc_prefix'}, 		$conf_defaults{udc_prefix});
