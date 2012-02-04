@@ -28,6 +28,8 @@ fi
 args=("$@")
 
 TIMEOUT=10
+IP4_CHECK="/proc/$$/net/ip_tables_names"
+IP6_CHECK="/proc/$$/net/ip6_tables_names"
 
 trap "rm -f $TFILE; rm -f $SFILE" EXIT 1 2 3 4 5 6 7 8 10 11 12 13 14 15
 
@@ -38,6 +40,12 @@ for ebin in iptables-save iptables-restore husk mktemp cat grep logger printf ; 
 done
 TFILE=$(mktemp -t husk-fire.XXX)
 SFILE=$(mktemp -t husk-fire-save.XXX)
+
+# What do we have support for?
+IPv4=0
+IPv6=0
+[[ -e $IP4_CHECK ]] && { IPv4=1; logger -t husk-fire -p user.debug -- 'IPv4 (iptables) support appears to be present'; }
+[[ -e $IP6_CHECK ]] && { IPv6=1; logger -t husk-fire -p user.debug -- 'IPv4 (iptables) support appears to be present'; }
 
 # Compile ruleset to a temporary file
 echo 'Compiling rules.... '
@@ -101,12 +109,20 @@ fi
 # user feedback
 iptables -S &> /dev/null
 if [[ $? -eq 0 ]] ; then
-  ip4chains=$( ( for T in filter nat mangle raw ; do iptables -t $T -S ; done )  | grep -Pc '^-N' )
-  ip6chains=$( ( for T in filter mangle raw ;     do ip6tables -t $T -S ; done ) | grep -Pc '^-N' )
-  ip4rules=$( ( for T in filter nat mangle raw ;  do iptables -t $T -S ; done )  | grep -Pc '^-A' )
-  ip6rules=$( ( for T in filter mangle raw ;      do ip6tables -t $T -S ; done ) | grep -Pc '^-A' )
-  printf 'IPv4: %u rules in %u chains.\n' $ip4rules $ip4chains
-  printf 'IPv6: %u rules in %u chains.\n' $ip6rules $ip6chains
+  if [[ $IPv4 -eq 1 ]] ; then
+	ip4chains=$( ( for T in filter nat mangle raw ; do iptables -t $T -S ; done )  | grep -Pc '^-N' )
+	ip4rules=$( ( for T in filter nat mangle raw ;  do iptables -t $T -S ; done )  | grep -Pc '^-A' )
+	msg=$(printf 'IPv4: Loaded %u rules in %u chains.\n' $ip4rules $ip4chains)
+	echo $msg
+	logger -t husk-fire -p user.info -- $msg
+  fi
+  if [[ $IPv6 -eq 1 ]] ; then
+	ip6chains=$( ( for T in filter mangle raw ;     do ip6tables -t $T -S ; done ) | grep -Pc '^-N' )
+	ip6rules=$( ( for T in filter mangle raw ;      do ip6tables -t $T -S ; done ) | grep -Pc '^-A' )
+	msg=$(printf 'IPv6: Loaded %u rules in %u chains.\n' $ip6rules $ip6chains)
+	echo $msg
+	logger -t husk-fire -p user.info -- $msg
+  fi
 fi
 
 # Save to init script file if possible
