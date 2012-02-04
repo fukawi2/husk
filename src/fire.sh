@@ -55,6 +55,7 @@ if "husk" $@ &> "$TFILE" ; then
 	logger -t husk-fire -p user.info -- 'Compilation complete'
 else
     echo 'Error compiling ruleset:' >&2
+	logger -t husk-fire -p user.warning -- 'Error during compilation :('
 	cat "$TFILE" >&2
     exit 3
 fi
