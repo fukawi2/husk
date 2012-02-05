@@ -77,11 +77,12 @@ fi
 # Apply the new rules
 echo "Activating rules...."
 logger -t husk-fire -p user.info -- 'Activating compiled rules'
-activation_output=$(/bin/bash $TFILE)
+activation_output=$(/bin/bash $TFILE 2>&1)
 
 # How did we go?
 if [[ -n "$activation_output" ]] ; then
 	# uhoh, generated some output...
+	echo $activation_output 1>&2
 	logger -s -t husk-fire -p user.warning <<< $activation_output
 fi
 
