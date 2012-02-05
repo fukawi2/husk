@@ -17,7 +17,8 @@ F_CONF=husk.conf interfaces.conf addr_groups.conf
 F_HELPERS=icmp.conf icmpv6.conf samba.conf apple-ios.conf avg.conf dhcp.conf \
 		  dhcpv6.conf mail.conf dns.conf snmp.conf sql.conf gotomeeting.conf \
 		  pptp.conf nfs.conf
-F_DOCS=ABOUT README rules.conf.simple rules.conf.standalone LICENSE
+F_DOCS=README doc/ABOUT doc/LICENSE doc/rules.conf.simple \
+	   doc/rules.conf.standalone doc/rules.conf.example
 
 fb_dir=.fallback-$(shell date +%Y%m%d%H%M%S)
 
