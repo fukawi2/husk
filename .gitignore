@@ -1,2 +1,5 @@
 man/*.?.man
 man/*.html
+releases/
+rules.conf
+*.BAK
