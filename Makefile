@@ -19,6 +19,7 @@ F_HELPERS=icmp.conf icmpv6.conf samba.conf apple-ios.conf avg.conf dhcp.conf \
 		  pptp.conf nfs.conf
 F_DOCS=README doc/ABOUT doc/LICENSE doc/rules.conf.simple \
 	   doc/rules.conf.standalone doc/rules.conf.example
+F_MAN=man/*
 
 fb_dir=.fallback-$(shell date +%Y%m%d%H%M%S)
 
@@ -86,7 +87,7 @@ test:
 
 bin: test src/$(PROJECT).pl src/fire.sh
 
-docs: $(F_DOCS)
+docs: $(F_DOCS) $(F_MAN)
 	# build man pages
 	pod2man --name=husk man/husk.pod man/husk.1.man
 	pod2man --name=fire man/fire.pod man/fire.1.man
