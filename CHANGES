@@ -275,3 +275,23 @@ make sure ad helper calls samba helper for ipv4 and ipv6
 active directory "dynamic port range" includes udp as well as tcp
 fix bug that didnt use old state tracking with ipv6 rules
 fixed syntax error in last bug fix
+* ==> Version 0.9.8
+update "fallback" function of Makefile
+added man page for husk.conf
+cleanup of pod documentation structure
+add pod2html in Makefile
+fix links to http and mailto in pod docs
+added "clean" target to Makefile
+updated Makefile "uninstall" target
+cleanup README; remove duplicate documentation
+fire: user feedback on rule count after load
+ammed last commit; -n option invalid with -S
+rule count user feedback only if iptables supports -S flag
+Makefile: fix man paths
+added .gitignore
+added code support for documented "rules_file" config option
+added "wlan" to list of valid interface prefixes
+remove use of sigil (&) before calls to subs; bad practice
+fire: fix errors when generating user feedback on systems without ipv6
+fire: log to syslog if compilation fails
+fire; fix for logging iptables errors
