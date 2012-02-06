@@ -71,12 +71,17 @@ fallback:
 test:
 	@echo "==> Checking for required external dependencies"
 	for bindep in $(DEP_BINS) ; do \
-		which $$bindep > /dev/null || exit 1 ; \
+		which $$bindep > /dev/null || { echo "$$bindep not found"; exit 1;} ; \
 	done
 
 	@echo "==> Checking for required perl modules"
 	for pmod in $(DEP_PMODS) ; do \
-		perl -M$$pmod -e 1 || exit 1 ; \
+		perl -M$$pmod -e 1 && { \
+			echo '===> Missing Perl Modules detected; Perhaps you need:' ; \
+			echo 'RedHat: yum install perl-Config-Simple perl-Config-IniFiles' ; \
+			echo 'Debian: apt-get install libconfig-inifiles-perl libconfig-simple-perl' ; \
+			exit 1; \
+			} ; \
 	done
 
 	@echo "==> Checking for valid script syntax"
