@@ -76,7 +76,7 @@ test:
 
 	@echo "==> Checking for required perl modules"
 	for pmod in $(DEP_PMODS) ; do \
-		perl -M$$pmod -e 1 && { \
+		perl -M$$pmod -e 1 || { \
 			echo '===> Missing Perl Modules detected; Perhaps you need:' ; \
 			echo 'RedHat: yum install perl-Config-Simple perl-Config-IniFiles' ; \
 			echo 'Debian: apt-get install libconfig-inifiles-perl libconfig-simple-perl' ; \
