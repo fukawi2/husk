@@ -65,6 +65,8 @@ my @bogon_protection;	# Array of interfaces to provide bogon protection on
 my @portscan_protection;# Array of interfaces to provide portscan protection on
 my @xmas_protection;	# Array of interfaces to provide xmas packet protection on
 my @syn_protection;		# Array of interfaces to provide NEW NO SYN protection on
+my @noroute_dests4;		# Array of IPv4 networks destinations to no-route (send dest-unreachable)
+my @noroute_dests6;		# Array of IPv6 networks destinations to no-route (send dest-unreachable)
 
 # compile some standard regex patterns
 # any variables starting with "qr_" are precompiled regexes
@@ -531,6 +533,10 @@ sub close_rules {
 	my $XMAS_CHAIN		= 'cmn_XMAS';
 	my $PORTSCAN_TABLE	= 'mangle';
 	my $PORTSCAN_CHAIN	= 'cmn_PORTSCAN';
+	my $NULLROUTE_TABLE	= 'mangle';
+	my $NULLROUTE_CHAIN	= 'cmn_NULLROUTE';
+	my $NOROUTE_TABLE	= 'filter'; # 'REJECT' target only valid in 'filter' table
+	my $NOROUTE_CHAIN	= 'cmn_NOROUTE';
 
 	# setup 'common' rules and chains
 	if ( scalar(@bogon_protection) ) {
@@ -771,6 +777,64 @@ sub close_rules {
 				$interface{$int},
 				$PORTSCAN_CHAIN,
 				$int,
+			));
+		}
+	}
+
+	# no-route
+	# these rules have to exist in the 'filter' table in order to support the 'REJECT'
+	# target. because of this, we need to ensure this processing is done late in our
+	# compile process to ensure the rules end up near the top of the FORWARD chain (by
+	# virtue of using -I instead of -A)
+	if ( $do_ipv4 && scalar(@noroute_dests4) ) {
+		# Destinations to reject with dest-unreachable
+		ipt4(sprintf('-t %s -N %s', $NOROUTE_TABLE, $NOROUTE_CHAIN));
+
+		# Populate the new chain with rules
+		ipt4(sprintf(
+			'-t %s -A %s -j LOG --log-prefix="[NO-ROUTE] " -m comment --comment "no-route"',
+			$NOROUTE_TABLE,
+			$NOROUTE_CHAIN,
+		));
+		ipt4(sprintf(
+			'-t %s -A %s -j REJECT --reject-with=icmp-net-unreachable -m comment --comment "no-route"',
+			$NOROUTE_TABLE,
+			$NOROUTE_CHAIN,
+		));
+
+		# Jump the new chain for packets matching the dest
+		foreach my $nr_dest (@noroute_dests4) {
+			ipt4(sprintf(
+				'-t %s -I FORWARD -d %s -j %s -m comment --comment "no-route"',
+				$NOROUTE_TABLE,
+				$nr_dest,
+				$NOROUTE_CHAIN,
+			));
+		}
+	}
+	if ( $do_ipv6 && scalar(@noroute_dests6) ) {
+		# Destinations to reject with dest-unreachable
+		ipt6(sprintf('-t %s -N %s', $NOROUTE_TABLE, $NOROUTE_CHAIN));
+
+		# Populate the new chain with rules
+		ipt6(sprintf(
+			'-t %s -A %s -j LOG --log-prefix="[NO-ROUTE] " -m comment --comment "no-route"',
+			$NOROUTE_TABLE,
+			$NOROUTE_CHAIN,
+		));
+		ipt6(sprintf(
+			'-t %s -A %s -j REJECT --reject-with=icmp-net-unreachable -m comment --comment "no-route"',
+			$NOROUTE_TABLE,
+			$NOROUTE_CHAIN,
+		));
+
+		# Jump the new chain for packets matching the dest
+		foreach my $nr_dest (@noroute_dests4) {
+			ipt6(sprintf(
+				'-t %s -I FORWARD -d %s -j %s -m comment --comment "no-route"',
+				$NOROUTE_TABLE,
+				$nr_dest,
+				$NOROUTE_CHAIN,
 			));
 		}
 	}
@@ -1288,6 +1352,7 @@ sub compile_common {
 	my $qr_CMN_BOGON	= qr/\Abogon ($qr_int_name)$qr_OPTS\z/io;
 	my $qr_CMN_PORTSCAN	= qr/\Aportscan ($qr_int_name)\z/io;
 	my $qr_CMN_XMAS		= qr/\Axmas ($qr_int_name)\z/io;
+	my $qr_CMN_NOROUTE	= qr/\Anoroute $qr_OPTS\z/io;
 
 	# strip out the leading 'common' keyword
 	$line =~ s/$qr_tgt_common//s;
@@ -1420,6 +1485,19 @@ sub compile_common {
 			unless ( $interface{$iface} );
 
 		push(@xmas_protection, $iface);
+	}
+	elsif ( $line =~ m/$qr_CMN_NOROUTE/ ) {
+		# no-route destination address
+		my $dst = $1;
+
+		# Validate
+		if ( $dst =~ m/\A$qr_ip4_cidr\z/ ) {
+			push(@noroute_dests4, $dst);
+		} elsif ( $dst =~ m/\A$qr_ip6_cidr\z/ ) {
+			push(@noroute_dests6, $dst);
+		} else {
+			bomb(sprintf('Invalid destination specified for no-routing: %s', $dst));
+		}
 	} else {
 		bomb('Unrecognized "common" rule: '.$line);
 	}
