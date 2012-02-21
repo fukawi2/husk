@@ -144,9 +144,9 @@ my %IPV4_BOGON_SOURCES = (
 );
 # Most of these IPv6 bogons are sourced from:
 # http://6session.wordpress.com/2009/04/08/ipv6-martian-and-bogon-filters/
+# These addresses are dropped if they are seen in a SOURCE address.
 my %IPV6_BOGON_SOURCES = (
 	'3fff:ffff::/32'	=> 'EXAMPLENET-WF',
-	'2001:0DB8::/32'	=> 'EXAMPLENET-WF',
 	'fec0::/10'			=> 'Site Local Addresses (RFC-3879)',
 	'::/96'				=> 'Deprecated (RFC-4291)',
 	'::/128'			=> 'Unspecified address',
@@ -154,7 +154,7 @@ my %IPV6_BOGON_SOURCES = (
 	'::ffff:0.0.0.0/96'	=> 'IPv4-mapped addresses',
 	'0000::/8'			=> 'Embedded IPv4 addresses',
 	'0200::/7'			=> 'RFC-4548/RFC-4048',
-	'2001:db8::/32'		=> 'IANA Reserved',
+	'2001:db8::/32'		=> 'IANA Reserved (Documentation Examples)',
 	'2002:0000::/24'	=> '6to4; IPv4 default',
 	'2002:0a00::/24'	=> '6to4; IPv4 RFC-1918',
 	'2002:7f00::/24'	=> '6to4; IPv4 loopback',
@@ -164,6 +164,7 @@ my %IPV6_BOGON_SOURCES = (
 	'2002:ff00::/24'	=> '6to4',
 	'3ffe::/16'			=> 'Former 6bone',
 	'fc00::/7'			=> 'RFC-4193',
+	'ff00::/8'			=> 'Multicast; Prohibited as Source Address',
 );
 
 # Most of these rules gathered from "gotroot.com":
