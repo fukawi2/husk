@@ -65,6 +65,7 @@ my @bogon_protection;	# Array of interfaces to provide bogon protection on
 my @portscan_protection;# Array of interfaces to provide portscan protection on
 my @xmas_protection;	# Array of interfaces to provide xmas packet protection on
 my @syn_protection;		# Array of interfaces to provide NEW NO SYN protection on
+my @snat_chains;		  # Array to list the chains we've created for snatting
 
 # compile some standard regex patterns
 # any variables starting with "qr_" are precompiled regexes
@@ -1314,13 +1315,15 @@ sub compile_common {
 			unless ( $interface{$snat_oeth} );
 
 		# Create a SNAT chain for this interface
-		ipt4(sprintf('-t nat -N %s', $snat_chain));
+		unless ( grep(m/$snat_chain/, @snat_chains) ) {
+      ipt4('-t nat -N '.$snat_chain);
+      push(@snat_chains, $snat_chain);
+    }
 
 		# Only specific sources?
 		my $snat_src;
 		if ( $line =~ s/\b(source|src)( address(es)?)?\s+($qr_ip4_cidr)\b//si ) {
 			$snat_src = $4;
-			warn('common NAT rule found specifying source address; Not supported yet');
 		}
 
 		# Work out if we're SNAT'ing or MASQUERADING
@@ -1332,12 +1335,12 @@ sub compile_common {
 		# Add SNAT rules to the SNAT chain
 		if ( $snat_ip ) {
 			# User specified a SNAT address
-			ipt4(collapse_spaces(sprintf(
-					'-t nat -A %s -j SNAT --to %s -m comment --comment "husk line %s"',
-					$snat_chain,
-					$snat_ip,
-					$line_cnt,
-			)));
+      my $ipt_rule;
+      $ipt_rule = '-t nat -A '.$snat_chain;
+      $ipt_rule .= sprintf(' -s %s', $snat_src)  if ( defined($snat_src) );
+      $ipt_rule .= sprintf(' -j SNAT --to %s', $snat_ip);
+      $ipt_rule .= sprintf(' -m comment --comment "husk line %s"', $line_cnt);
+			ipt4($ipt_rule);
 		} else {
 			# Default to MASQUERADE
 			# This allows the 'src' argument in the kernel to
@@ -1346,12 +1349,23 @@ sub compile_common {
 			# HA is used, and there is a 'src' argument to tell
 			# the kernel to prefer the Virtual Address as the
 			# source.
-			ipt4(collapse_spaces(sprintf(
-					'-t nat -A %s -j MASQUERADE -m comment --comment "husk line %s"',
+      my $ipt_rule;
+      $ipt_rule = '-t nat -A '.$snat_chain;
+      $ipt_rule .= sprintf(' -s %s', $snat_src)  if ( defined($snat_src) );
+      $ipt_rule .= ' -j MASQUERADE';
+      $ipt_rule .= sprintf(' -m comment --comment "husk line %s"', $line_cnt);
+			ipt4($ipt_rule);
+		}
+
+    # if source address was spefified, jump the snat chain for that source
+    if ( defined($snat_src) ) {
+			ipt4(sprintf('-t nat -A POSTROUTING -o %s -s %s -j %s -m comment --comment "husk line %s"',
+					$interface{$snat_oeth},
+					$snat_src,
 					$snat_chain,
 					$line_cnt,
-			)));
-		}
+			));
+    }
 
 		# Call the snat chain from POSTROUTING for private addresses
 		foreach my $rfc1918 (qw(10.0.0.0/8 172.16.0.0/12 192.168.0.0/16)) {
