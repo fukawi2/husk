@@ -225,9 +225,6 @@ This set of example rules is for a simple firewall/router machine.
 	common xmas NET
 	common syn NET
 	common spoof LAN 10.0.0.0/24
-	common noroute 10.0.0.0/8
-	common noroute 172.16.0.0/12
-	common noroute 192.168.0.0/16
 
 =head2 IPV6
 

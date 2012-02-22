@@ -50,13 +50,3 @@ common portscan NET
 common xmas NET
 common syn NET
 common spoof LAN 10.0.0.0/24
-# "noroute" blocks traffic to the given destination and sends
-# an icmp-net-unreachable error back to the source
-# this default ruleset no-routes RFC1918 provate addresses to prevent
-# leakage of private addresses to the internet (your ISP probably (or
-# at least should!) block them anyway, but it's nice to catch it early.
-# however it probably breaks stuff in your environment. remove the
-# no-route for the address space that you use.
-common noroute 10.0.0.0/8
-common noroute 172.16.0.0/12
-common noroute 192.168.0.0/16
