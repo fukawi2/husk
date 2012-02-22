@@ -1169,56 +1169,60 @@ sub compile_nat {
 		{ $criteria{proto}	= lc($2) }
 	if ( $rule =~ s/$qr_kw_dst_addr//s )
 		{ $criteria{inet_ext}	= lc($2) }
-	if ( $rule =~ s/$qr_kw_sport//s ) {
-		my $port = lc($1);
-		$criteria{sport_ext} = $port;
-	}
-	if ( $rule =~ s/$qr_kw_dport//s ) {
-		my $port = lc($3);
-		$criteria{dport_ext} = $port;
-	}
-	if ( $rule =~ s/$qr_kw_multisport//s ) {
-		my $ports = lc($1);
-		$criteria{sports_ext} = $ports;
-	}
-	if ( $rule =~ s/$qr_kw_multidport//s ) {
-		my $ports = lc($3);
-		$criteria{dports_ext} = $ports;
-	}
+	if ( $rule =~ s/$qr_kw_sport//s )
+    {	$criteria{sport_ext} = lc($1) }
+	if ( $rule =~ s/$qr_kw_dport//s )
+    { $criteria{dport_ext} = lc($3) }
+	if ( $rule =~ s/$qr_kw_multisport//s )
+    { $criteria{sports_ext} = lc($1) }
+	if ( $rule =~ s/$qr_kw_multidport//s )
+    { $criteria{dports_ext} = lc($3) }
 	if ( $rule =~ s/to ($qr_ip4_address):?([0-9]+)?\b//si ) {
-		$criteria{inet_int}	= $1 ? $1 : '';
-		$criteria{port_int}	= $2 ? $2 : $criteria{dport_ext};
+		$criteria{inet_int}	= $1;
+		$criteria{port_int}	= $2 ? $2 : undef;
   }
 
 	# make sure we've understood everything on the line, otherwise BARF!
 	unknown_keyword(rule=>$rule, complete_rule=>$complete_rule)
 		if ( trim($rule) );
 
+  # no point specifying the internal port if it is the same as the external
+  if ( $criteria{port_int} && $criteria{dport_ext} ) {
+    $criteria{port_int} = undef if ( $criteria{port_int} eq $criteria{dport_ext} );
+  }
+
+  my ($snat_src, $snat_sport, $snat_dport);
+  $snat_src    = $criteria{inet_ext};
+  $snat_sport  = $criteria{port_int} ? $criteria{port_int} : $criteria{dport_ext};
+  $snat_dport  = $criteria{sport_ext};
+
+	my $ipt_rule;
 	# DNAT with the criteria defined
-	ipt4(collapse_spaces(sprintf(
-			'-t nat -A PREROUTING %s %s %s %s %s %s %s -j DNAT %s%s',
-			$criteria{in}			? "-i $interface{$criteria{in}}"				: '',
-			$criteria{proto}		? "-p $criteria{proto}"							: '',
-			$criteria{inet_ext}		? "-d $criteria{inet_ext}"						: '',
-			$criteria{sport_ext}	? "--sport $criteria{sport_ext}"				: '',
-			$criteria{dport_ext} 	? "--dport $criteria{dport_ext}"				: '',
-			$criteria{sports_ext}	? "-m multiport --sports $criteria{sports_ext}"	: '',
-			$criteria{dports_ext}	? "-m multiport --dports $criteria{dports_ext}"	: '',
-			$criteria{inet_int}		? "--to $criteria{inet_int}"					: '',
-			$criteria{port_int}		? ":$criteria{port_int}"						: '',
-		)));
+	$ipt_rule = '-t nat -A PREROUTING';
+	$ipt_rule .= sprintf(' -i %s', $interface{$criteria{in}})               if ( defined($criteria{in}) );
+	$ipt_rule .= sprintf(' -d %s', $criteria{inet_ext})                     if ( defined($criteria{inet_ext}) );
+	$ipt_rule .= sprintf(' -p %s', $criteria{proto})                        if ( defined($criteria{proto}) );
+	$ipt_rule .= sprintf(' --sport %s', $criteria{sport_ext})               if ( defined($criteria{sport_ext}) );
+	$ipt_rule .= sprintf(' --dport %s', $criteria{dport_ext})               if ( defined($criteria{dport_ext}) );
+	$ipt_rule .= sprintf(' -m multiport --sports %s', $criteria{sports_ext})if ( defined($criteria{sports_ext}) );
+	$ipt_rule .= sprintf(' -m multiport --dports %s', $criteria{dports_ext})if ( defined($criteria{dports_ext}) );
+	$ipt_rule .= sprintf(' -j DNAT --to %s', $criteria{inet_int})           if ( defined($criteria{inet_int}) );
+	$ipt_rule .= ":$criteria{port_int}"                                     if ( defined($criteria{port_int}) );
+	ipt4(collapse_spaces($ipt_rule));
+
 	# SNAT with the criteria inversed (ie, dest become source and vice-versa)
-	ipt4(collapse_spaces(sprintf(
-			'-t nat -A POSTROUTING %s %s %s %s %s %s %s -j SNAT %s',
-			$criteria{in}			    ? "-o $interface{$criteria{in}}"				        : '',
-			$criteria{proto}		  ? "-p $criteria{proto}"							            : '',
-			$criteria{inet_int}		? "-s $criteria{inet_int}"						          : '',
-			$criteria{sport_ext}	? "--dport $criteria{sport_ext}"				        : '',
-			$criteria{dport_ext}	? "--sport $criteria{port_int}"				        : '',
-			$criteria{sports_ext}	? "-m multiport --dports $criteria{sports_ext}"	: '',
-			$criteria{dports_ext}	? "-m multiport --sports $criteria{dports_ext}"	: '',
-			$criteria{inet_ext}		? "--to $criteria{inet_ext}"					          : '',
-		)));
+  if ( $snat_src ) {
+    $ipt_rule = '-t nat -A POSTROUTING';
+    $ipt_rule .= sprintf(' -o %s', $interface{$criteria{in}})               if ( defined($criteria{in}) );
+    $ipt_rule .= sprintf(' -s %s', $criteria{inet_int})                     if ( defined($criteria{inet_int}) );
+    $ipt_rule .= sprintf(' -p %s', $criteria{proto})                        if ( defined($criteria{proto}) );
+    $ipt_rule .= sprintf(' --dport %s', $snat_dport)                        if ( defined($snat_dport) );
+    $ipt_rule .= sprintf(' --sport %s', $snat_sport)                        if ( defined($snat_sport) );
+    $ipt_rule .= sprintf(' -m multiport --dports %s', $criteria{sports_ext})if ( defined($criteria{sports_ext}) );
+    $ipt_rule .= sprintf(' -m multiport --sports %s', $criteria{dports_ext})if ( defined($criteria{dports_ext}) );
+    $ipt_rule .= sprintf(' -j SNAT --to %s', $snat_src)                     if ( defined($snat_src) );
+    ipt4(collapse_spaces($ipt_rule));
+  }
 }
 
 sub compile_interception {
