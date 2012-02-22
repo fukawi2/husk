@@ -1185,7 +1185,7 @@ sub compile_nat {
 		my $ports = lc($3);
 		$criteria{dports_ext} = $ports;
 	}
-	if ( $rule =~ s/to ($qr_ip4_address)?:?([0-9]+)?\b//si ) {
+	if ( $rule =~ s/to ($qr_ip4_address):?([0-9]+)?\b//si ) {
 		$criteria{inet_int}	= $1 ? $1 : '';
 		$criteria{port_int}	= $2 ? $2 : $criteria{dport_ext};
   }
