@@ -311,3 +311,20 @@ large cleanup, rewrite and repair of "compile_nat" sub
 cleanup of code for "common nat" rules; support for specifying source address to snat
 removed generation of "map" inversion; not required
 fire: added helper to make suggestions against ruleset
+* ==> Version 0.9.9
+move docs to subdir to cleanup root
+Makefile; add man pages as prerequisite for docs target
+husk.pod shouldnt be executable
+expanded .gitignore file
+Makefile; add helpful messages to test errors
+Makefile; fix helpful messages to test errors
+cleanup of ipv6 bogon list
+added support for "noroute" option
+Revert "added support for "noroute" option"
+cleanup and repairs to compile_nat for "map" functionality
+destination addres not optional in "map" rule
+large cleanup, rewrite and repair of "compile_nat" sub
+cleanup of code for "common nat" rules; support for specifying source address to snat
+removed generation of "map" inversion; not required
+fire: added helper to make suggestions against ruleset
+updated CHANGES file for commits between ver_0.9.8 to ver_0.9.9
