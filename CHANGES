@@ -295,3 +295,19 @@ remove use of sigil (&) before calls to subs; bad practice
 fire: fix errors when generating user feedback on systems without ipv6
 fire: log to syslog if compilation fails
 fire; fix for logging iptables errors
+* ==> Version 0.9.9
+move docs to subdir to cleanup root
+Makefile; add man pages as prerequisite for docs target
+husk.pod shouldnt be executable
+expanded .gitignore file
+Makefile; add helpful messages to test errors
+Makefile; fix helpful messages to test errors
+cleanup of ipv6 bogon list
+added support for "noroute" option
+Revert "added support for "noroute" option"
+cleanup and repairs to compile_nat for "map" functionality
+destination addres not optional in "map" rule
+large cleanup, rewrite and repair of "compile_nat" sub
+cleanup of code for "common nat" rules; support for specifying source address to snat
+removed generation of "map" inversion; not required
+fire: added helper to make suggestions against ruleset
