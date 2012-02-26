@@ -19,13 +19,42 @@
 # by Martin F. Krafft <madduck@madduck.net> and distributed under the
 # Artistic Licence 2.0
 
+function make_suggestions {
+	rfile='/etc/husk/rules.conf'
+	[[ -f $rfile ]] || { echo "$rfile not found" ; return 1; }
+	[[ -r $rfile ]] || { echo "$rfile not readable" ; return 1; }
+	# check for missing "common" rules
+	grep -qPi '^\s*common\s+loopback'	$rfile || echo 'MISSING: common loopback'
+	grep -qPi '^\s*common\s+spoof'		$rfile || echo 'MISSING: common spoof LAN x.x.x.x/yy'
+	grep -qPi '^\s*common\s+bogon'		$rfile || echo 'MISSING: common bogon NET'
+	grep -qPi '^\s*common\s+portscan'	$rfile || echo 'MISSING: common portscan NET'
+	grep -qPi '^\s*common\s+xmas'		$rfile || echo 'MISSING: common xmas NET'
+	grep -qPi '^\s*common\s+syn'		$rfile || echo 'MISSING: common syn NET'
+	# check for use of sub-routines
+	if ! grep -qPi '^\s*define\s+rules\s+\S+$' $rfile ; then
+		echo '============================================================'
+		printf "%10s %s\n" 'Problem:' 'No subroutines found.'
+		printf "%10s %s\n" 'Risk:' 'Subroutines help make your rules more efficient.'
+		printf "%10s %s\n" 'Suggest:' 'Consolidate repeated rules into subroutines. Refer to docs for further infomation.'
+	fi
+	# check for logging without rate-limiting
+	log_lines=$(grep -Pi '^\s*log\s+' $rfile)
+	if [[ -n "$log_lines" ]] ; then
+		# found log lines...
+		if ! grep -qPi '\s+limit\s+' <<< $log_lines ; then
+			# ...but not rate-limited
+			echo '============================================================'
+			printf "%10s %s\n" 'Problem:' 'You appear to have 1 or more logging rules that are not rate-limited.'
+			printf "%10s %s\n" 'Risk:' 'This could cause a Denial-of-Service (DOS) against your rule sets'
+			printf "%10s %s\n" 'Suggest:' 'Apply a rate-limit to logging rules. eg: "limit 3/sec"'
+		fi
+	fi
+}
+
 if [ $EUID -ne 0 ] ; then
 	echo "You are using a non-privileged account"
 	exit 1
 fi
-
-# Get command line args
-args=("$@")
 
 TIMEOUT=10
 IP4_CHECK="/proc/$$/net/ip_tables_names"
@@ -38,6 +67,23 @@ export PATH='/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin'
 for ebin in iptables-save iptables-restore husk mktemp cat grep logger printf ; do
 	[[ -z "$(which $ebin 2>/dev/null)" ]] && { echo "Could not locate '$ebin'" >&2; exit 1; }
 done
+
+### did the user ask for a helper?
+while getopts "s" opt; do
+	case $opt in
+	s)
+		make_suggestions
+		exit 0
+		;;
+	*)
+		echo "Invalid option: -$OPTARG" >&2
+		;;
+	esac
+done
+# get remaining command line args
+args=("$@")
+
+# we need some temp files
 TFILE=$(mktemp -t husk-fire.XXX)
 SFILE=$(mktemp -t husk-fire-save.XXX)
 
