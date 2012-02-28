@@ -77,6 +77,7 @@ while getopts "s" opt; do
 		;;
 	*)
 		echo "Invalid option: -$OPTARG" >&2
+    exit 1
 		;;
 	esac
 done
