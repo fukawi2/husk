@@ -92,7 +92,7 @@ SFILE=$(mktemp -t husk-fire-save.XXX)
 IPv4=0
 IPv6=0
 [[ -e $IP4_CHECK ]] && { IPv4=1; logger -t husk-fire -p user.debug -- 'IPv4 (iptables) support appears to be present'; }
-[[ -e $IP6_CHECK ]] && { IPv6=1; logger -t husk-fire -p user.debug -- 'IPv4 (iptables) support appears to be present'; }
+[[ -e $IP6_CHECK ]] && { IPv6=1; logger -t husk-fire -p user.debug -- 'IPv6 (ip6tables) support appears to be present'; }
 
 # Compile ruleset to a temporary file
 echo 'Compiling rules.... '
