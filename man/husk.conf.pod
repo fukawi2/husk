@@ -81,6 +81,17 @@ Known to affect: CentOS 5 (ip6tables only)
 
 Default: 0
 
+=item C<no_ipv6_comments>
+
+Some early IPv6 kernels did not have support for the "comment" iptables module.
+Husk includes a comment with all rules to help identify the source of a
+particular rule. This issue is known to affect CentOS 5. To disable comments on
+IPv6 rules, set this option to 1.
+
+Known to affect: CentOS 5 (ip6tables only)
+
+Default: 0
+
 =item C<iptables>
 
 The path to iptables binary on your system. Usually C</sbin/iptables> or
