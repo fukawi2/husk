@@ -37,6 +37,7 @@ $conf_defaults{ipv4}			= 1;
 $conf_defaults{ipv6}			= 0;
 $conf_defaults{ignore_autoconf}	= 0;
 $conf_defaults{old_state_track}	= 0;
+$conf_defaults{no_ipv6_comments}	= 0;
 
 # runtime vars
 my ($conf_file, $conf_dir, $rules_file, $udc_prefix, $kw);
@@ -44,7 +45,7 @@ my ($iptables, $ip6tables);	# Paths to binaries
 my ($do_ipv4, $do_ipv6);	# Enable/Disable specific IP Versions
 my $ignore_autoconf;		# Ignore autoconf traffic before antispoof logging?
 my $old_state_track;		# Use 'state' module instead of 'conntrack'
-my $disable_ipv6_comments;	# Early versions of ip6tables didn't support the 'comment' module
+my $no_ipv6_comments;		# Do not include comments with IPv6 rules
 my $curr_chain;				# Name of current chain to append rules to
 my $current_rules_file;		# The filename of the rules currently being read (needs to be globally scoped to use in multiple subs)
 my $line_cnt = 0;			# Counter for line number (needs to be globally scoped to use in multiple subs)
@@ -1457,6 +1458,7 @@ sub read_config_file {
 	$do_ipv6			= coalesce($config{'default.ipv6'}, 			$conf_defaults{ipv6});
 	$ignore_autoconf	= coalesce($config{'default.ignore_autoconf'},	$conf_defaults{ignore_autoconf});
 	$old_state_track	= coalesce($config{'default.old_state_track'},	$conf_defaults{old_state_track});
+	$no_ipv6_comments = coalesce($config{'default.no_ipv6_comments'},	$conf_defaults{no_ipv6_comments});
 	chomp($conf_dir);
 	chomp($iptables)			if ( $iptables );
 	chomp($ip6tables)			if ( $ip6tables );
@@ -1465,6 +1467,7 @@ sub read_config_file {
 	chomp($do_ipv6);
 	chomp($ignore_autoconf);
 	chomp($old_state_track);
+  chomp($no_ipv6_comments);
 
 	# validate config
 	{
@@ -1569,7 +1572,7 @@ sub handle_cmd_args {
 		"c|conf=s"	=> \$conf_file,
 		"4|ipv4"	=> \$do_ipv4,
 		"6|ipv6"	=> \$do_ipv6,
-		"no-ipv6-comments"	=> \$disable_ipv6_comments,
+		"no-ipv6-comments"	=> \$no_ipv6_comments,
 	) or usage();
 }
 
@@ -1663,7 +1666,7 @@ sub ipt4 {
 sub ipt6 {
 	my ($line) = @_;
 	return unless ( $do_ipv6 );
-	if ( $disable_ipv6_comments ) {
+	if ( $no_ipv6_comments ) {
 		# Early versions of ip6tables did not include support for the 'comment'
 		# module (eg, CentOS 5.x) so we need to exclude them sometimes.
 		$line =~ s/-m comment --comment ("|')[^\1]+\1//;
