@@ -96,7 +96,7 @@ IPv6=0
 # Compile ruleset to a temporary file
 echo 'Compiling rules.... '
 logger -t husk-fire -p user.info -- 'Beginning compilation'
-if "husk" $@ &> "$TFILE" ; then
+if "husk" &> "$TFILE" ; then
     echo '   DONE'
 	logger -t husk-fire -p user.info -- 'Compilation complete'
 else

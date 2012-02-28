@@ -100,8 +100,6 @@ Using the associated "fire" script:
 
 	fire
 
-	fire --no-ipv6-comments
-
 =head1 HELPERS
 
 Several helpers have been supplied with husk to assist with firewalling common
