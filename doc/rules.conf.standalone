@@ -35,7 +35,10 @@ end define
 
 # Standard stuff
 common loopback
-common bogon NET
+# "common bogon" is disabled by default because it is too easy to lock yourself
+# out. enable it after you have read the documentation, understand it and are
+# sure it won't lock you out of your system remotely.
+#common bogon NET # disabled by default because it is too easy to lock yourself out
 common xmas NET
 common syn NET
 common portscan NET
