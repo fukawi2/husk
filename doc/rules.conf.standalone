@@ -4,12 +4,13 @@
 # network cards.
 #
 include helpers/icmp.conf
+include helpers/icmpv6.conf
 
 define rules SSH_ALLOWED
-accept ip 4 source address home.example.com		# Only IPv4 from home.example.com
-accept ip both source address work.example.com	# IPv4 and IPv6 from work.example.com
-accept ip 6 2001:55cc:4141::2652:9338			# IPv6 Host
-accept ip 6 2001:55cc:4141:d1d4::/64			# IPv6 Subnet
+accept ip 4 source address home.example.com		        # Only IPv4 from home.example.com
+accept ip both source address work.example.com	      # IPv4 and IPv6 from work.example.com
+accept ip 6 source address 2001:55cc:4141::2652:9338	# IPv6 Host
+accept ip 6 aource address 2001:55cc:4141:d1d4::/64	  # IPv6 Subnet
 reject ip both all
 end define
 
@@ -37,3 +38,4 @@ common loopback
 common bogon NET
 common xmas NET
 common syn NET
+common portscan NET
