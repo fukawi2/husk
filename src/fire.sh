@@ -139,7 +139,7 @@ if [[ -n "$activation_output" ]] ; then
 fi
 
 # Get user confirmation that it's all OK (unless asked not to)
-if [ "$skip_confirm" != '0' ] ; then
+if [ "$skip_confirm" == '0' ] ; then
 	echo -n "Can you establish NEW connections to the machine? (y/N) "
 	read -n1 -t "${TIMEOUT}" ret 2>&1 || :
 	echo
