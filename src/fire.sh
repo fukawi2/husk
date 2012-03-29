@@ -60,6 +60,8 @@ TIMEOUT=10
 IP4_CHECK="/proc/$$/net/ip_tables_names"
 IP6_CHECK="/proc/$$/net/ip6_tables_names"
 
+skip_confirm=0
+
 trap "rm -f $TFILE; rm -f $SFILE" EXIT 1 2 3 4 5 6 7 8 10 11 12 13 14 15
 
 # Check we've got all our dependencies
@@ -71,6 +73,9 @@ done
 ### did the user ask for a helper?
 while getopts "s" opt; do
 	case $opt in
+	f)
+		skip_confirm=1
+		;;
 	s)
 		make_suggestions
 		exit 0
@@ -134,7 +139,7 @@ if [[ -n "$activation_output" ]] ; then
 fi
 
 # Get user confirmation that it's all OK (unless asked not to)
-if [ "${args[0]}" != '--no-confirm' ] ; then
+if [ "$skip_confirm" != '0' ] ; then
 	echo -n "Can you establish NEW connections to the machine? (y/N) "
 	read -n1 -t "${TIMEOUT}" ret 2>&1 || :
 	echo
