@@ -71,7 +71,7 @@ for ebin in iptables-save iptables-restore husk mktemp cat grep logger printf ; 
 done
 
 ### did the user ask for a helper?
-while getopts "s" opt; do
+while getopts "fs" opt; do
 	case $opt in
 	f)
 		skip_confirm=1
