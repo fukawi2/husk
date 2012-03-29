@@ -16,10 +16,15 @@ Description here.
 
 =over 4
 
-=item --no-confirm
+=item -f
 
 Don't ask for confirmation that the new ruleset applied successfully.
 B<DON'T MAKE A HABIT OF USING THIS!>
+
+=item -s
+
+Perform a basic examination of the current rules and make some suggestions
+for how they could be improved.
 
 =back
 
