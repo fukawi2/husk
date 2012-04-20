@@ -19,10 +19,12 @@ package main;
 
 use warnings;
 use strict;
-use 5.6.0;	# Need Perl version 5.6 for undefined scalar variable as a
-                # lexical reference to an anonymous filehandle.
-                # http://www.perlcritic.org/pod/Perl/Critic/Policy/InputOutput/ProhibitBarewordFileHandles.html
-#use 5.010_001;	# Need Perl version 5.10 for Coalesce operator (//)
+# The Perl convention for expressing version numbers as floats is:
+#   version + (patch level / 1000).
+use 5.006;  # Need Perl version 5.6 for undefined scalar variable as a
+            # lexical reference to an anonymous filehandle.
+            # http://www.perlcritic.org/pod/Perl/Critic/Policy/InputOutput/ProhibitBarewordFileHandles.html
+#use 5.01;  # Need Perl version 5.10 for Coalesce operator (//)
 use Config::Simple;		# To parse husk.conf
 use Config::IniFiles;	# To parse here documents in hostgroups.conf
 use Getopt::Long;
