@@ -409,6 +409,8 @@ sub read_rules_file {
 	# counter so we don't use it by accident
 	undef($current_rules_file);
 	undef($line_cnt);
+
+  return;
 }
 
 # create a new call chain (eg x_LAN_NET)
@@ -523,6 +525,7 @@ sub close_chain {
 		# This is a UDC; We don't append anything
 		;
 	}
+  return;
 }
 
 sub close_rules {
@@ -837,6 +840,7 @@ sub close_rules {
 	foreach my $chain (qw(INPUT FORWARD OUTPUT)) {
 		ipt(sprintf('-P %s DROP', $chain));
 	}
+  return;
 }
 
 sub print_header {
@@ -847,6 +851,7 @@ sub print_header {
 	print "# welcome to use and redistribute it under the conditions of the GPL license version 2\n";
 	print "# See the \"COPYING\" file for further details.\n";
 	print "#\n";
+  return;
 }
 
 sub generate_output {
@@ -879,6 +884,7 @@ sub generate_output {
 		}
 		print "### END IPv6 RULES ###\n\n";
 	}
+  return;
 }
 
 sub log_and_drop {
@@ -1210,6 +1216,8 @@ sub compile_nat {
 	$ipt_rule .= sprintf(' -j DNAT --to %s', $criteria{inet_int})           if ( defined($criteria{inet_int}) );
 	$ipt_rule .= ":$criteria{port_int}"                                     if ( defined($criteria{port_int}) );
 	ipt4(collapse_spaces($ipt_rule));
+
+  return 1;
 }
 
 sub compile_interception {
@@ -1269,6 +1277,8 @@ sub compile_interception {
 		$criteria{port_redir}	? "--to $criteria{port_redir}"				: '',
 	));
 	ipt4($ipt_rule);
+
+  return 1;
 }
 
 sub compile_common {
@@ -1431,6 +1441,8 @@ sub compile_common {
 	} else {
 		bomb('Unrecognized "common" rule: '.$line);
 	}
+
+  return 1;
 }
 
 ###############################################################################
@@ -1497,6 +1509,8 @@ sub read_config_file {
 		bomb('Unknown setting in config file: '.$key)
 			unless ( defined($conf_defaults{$key}) );
 	}
+
+  return 1;
 }
 
 sub load_addrgroups {
@@ -1511,6 +1525,8 @@ sub load_addrgroups {
 	if ( -f $fname) {
 		tie %addr_group, 'Config::IniFiles', ( -file => $fname );
 	}
+
+  return 1;
 }
 
 sub load_interfaces {
@@ -1569,6 +1585,8 @@ sub load_interfaces {
 	# Make sure we have a ME = lo definition
 	bomb(sprintf('Interface "lo" must be defined as "ME" in "%s"', $fname))
 		unless ( $interface{ME} =~ m/\Alo\z/ );
+
+  return 1;
 }
 
 sub handle_cmd_args {
@@ -1578,6 +1596,8 @@ sub handle_cmd_args {
 		"6|ipv6"	=> \$do_ipv6,
 		"no-ipv6-comments"	=> \$no_ipv6_comments,
 	) or usage();
+
+  return 1;
 }
 
 sub init {
@@ -1604,6 +1624,8 @@ sub init {
 		ipt(sprintf('-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT',	$chain));
 		ipt(sprintf('-A %s -m conntrack --ctstate RELATED -j ACCEPT',		$chain));
 	}
+
+  return 1;
 }
 
 ###############################################################################
@@ -1631,6 +1653,8 @@ sub include_file {
 	# Restore our details
 	$line_cnt = $orig_line_count;
 	$current_rules_file = $orig_fname;
+
+  return 1;
 }
 
 sub unknown_keyword {
@@ -1652,6 +1676,8 @@ sub unknown_keyword {
 		trim($rule),
 		$complete_rule,
 		'^'));
+
+  return 1;
 }
 
 sub ipt {
@@ -1659,12 +1685,16 @@ sub ipt {
 	my ($line) = @_;
 	ipt4($line);
 	ipt6($line);
+
+  return 1;
 }
 
 sub ipt4 {
 	my ($line) = @_;
 	return unless ( $do_ipv4 );
 	push(@ipv4_rules, $line);
+
+  return 1;
 }
 
 sub ipt6 {
@@ -1676,6 +1706,8 @@ sub ipt6 {
 		$line =~ s/-m comment --comment ("|')[^\1]+\1//;
 	}
 	push(@ipv6_rules, $line);
+
+  return 1;
 }
 
 sub is_bridged {
@@ -1724,6 +1756,7 @@ sub cleanup_line {
 	# Strip Comments and Trim
 	$line =~ s/\s*#.*\z//;
 	$line = trim($line);
+  return $line;
 }
 
 sub coalesce {
@@ -1790,12 +1823,14 @@ sub warn {
 	# Show warning to user
 	my ($msg) = @_; $msg = 'Unspecified Error' unless $msg;
 	print STDERR "WARNING: $msg\n";
+	return;
 }
 
 sub dbg {
 	# Debug Helper
 	my ($msg) = @_; $msg = 'Unspecified Error' unless $msg;
 	print STDERR "DEBUG: $msg\n";
+	return;
 }
 
 sub usage {
