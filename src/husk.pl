@@ -1148,7 +1148,7 @@ sub compile_call {
 
 		# Did we succeed?
 		unless ( $added_something ) {
-			warn(sprintf(
+			emit_warn(sprintf(
 				"The following rule did NOT compile successfully:\n\tLine %u ==> %s",
 				$line_cnt,
 				$complete_rule,
@@ -1819,7 +1819,7 @@ sub bomb {
 	exit 1;
 }
 
-sub warn {
+sub emit_warn {
 	# Show warning to user
 	my ($msg) = @_; $msg = 'Unspecified Error' unless $msg;
 	print STDERR "WARNING: $msg\n";
