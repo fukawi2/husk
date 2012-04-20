@@ -298,7 +298,7 @@ sub read_rules_file {
 
 			# make sure the user isn't trying to use a reserved word
 			bomb(sprintf('Target "%s" is named the same as a reserved word. This is invalid', $udc_name))
-				if ( grep(m/$udc_name/i, @RESERVED_WORDS) );
+        if ( grep { $_ =~ /$udc_name/i } @RESERVED_WORDS );
 
 			$curr_chain = new_udc_chain(line=>$line, udc_name=>$udc_name);
 		}
@@ -1301,7 +1301,7 @@ sub compile_common {
 			unless ( $interface{$snat_oeth} );
 
 		# Create a SNAT chain for this interface
-		unless ( grep(m/$snat_chain/, @snat_chains) ) {
+    unless ( grep { $_ =~ /$snat_chain/ } @snat_chains ) {
       ipt4('-t nat -N '.$snat_chain);
       push(@snat_chains, $snat_chain);
     }
