@@ -1092,9 +1092,9 @@ sub compile_call {
 		}
 
 		# conflicting information?
-		if ( $rule_is_ipv4 == 1 and ! $rule_is_ipv6 and ! $do_ipv4 )
+		if ( $rule_is_ipv4 && !$rule_is_ipv6 && !$do_ipv4 )
 			{ bomb('Can not compile IPv4 rule when IPv4 is disabled'); }
-		if ( $rule_is_ipv6 == 1 and ! $rule_is_ipv4 and ! $do_ipv6 )
+		if ( $rule_is_ipv6 && !$rule_is_ipv4 && !$do_ipv6 )
 			{ bomb('Can not compile IPv6 rule when IPv6 is disabled'); }
 	} else {
 		# default to ipv4
