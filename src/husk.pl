@@ -1784,7 +1784,7 @@ sub bomb {
 	exit 1;
 }
 
-sub warn() {
+sub warn {
 	# Show warning to user
 	my ($msg) = @_; $msg = 'Unspecified Error' unless $msg;
 	print STDERR "WARNING: $msg\n";
