@@ -25,8 +25,8 @@ use 5.006;  # Need Perl version 5.6 for undefined scalar variable as a
             # lexical reference to an anonymous filehandle.
             # http://www.perlcritic.org/pod/Perl/Critic/Policy/InputOutput/ProhibitBarewordFileHandles.html
 #use 5.01;  # Need Perl version 5.10 for Coalesce operator (//)
-use Config::Simple;		# To parse husk.conf
-use Config::IniFiles;	# To parse here documents in hostgroups.conf
+use Config::Simple;   # To parse husk.conf
+use Config::IniFiles; # To parse here documents in hostgroups.conf
 use Getopt::Long;
 
 my $VERSION = '%VERSION%';
@@ -35,14 +35,14 @@ my $VERSION = '%VERSION%';
 my %conf_defaults;
 $conf_defaults{conf_dir}    = '/etc/husk';
 $conf_defaults{rules_file}  = 'rules.conf';
-$conf_defaults{iptables}		= `which iptables 2>/dev/null`;
-$conf_defaults{ip6tables}		= `which ip6tables 2>/dev/null`;
-$conf_defaults{udc_prefix}		= 'tgt_';
-$conf_defaults{ipv4}			= 1;
-$conf_defaults{ipv6}			= 0;
-$conf_defaults{ignore_autoconf}	= 0;
-$conf_defaults{old_state_track}	= 0;
-$conf_defaults{no_ipv6_comments}	= 0;
+$conf_defaults{iptables}    = `which iptables 2>/dev/null`;
+$conf_defaults{ip6tables}   = `which ip6tables 2>/dev/null`;
+$conf_defaults{udc_prefix}  = 'tgt_';
+$conf_defaults{ipv4}        = 1;
+$conf_defaults{ipv6}        = 0;
+$conf_defaults{ignore_autoconf} = 0;
+$conf_defaults{old_state_track} = 0;
+$conf_defaults{no_ipv6_comments}= 0;
 
 # runtime vars
 my ($conf_file, $conf_dir, $rules_file, $udc_prefix, $kw);
