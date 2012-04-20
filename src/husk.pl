@@ -19,6 +19,9 @@ package main;
 
 use warnings;
 use strict;
+use 5.6.0;	# Need Perl version 5.6 for undefined scalar variable as a
+                # lexical reference to an anonymous filehandle.
+                # http://www.perlcritic.org/pod/Perl/Critic/Policy/InputOutput/ProhibitBarewordFileHandles.html
 #use 5.010_001;	# Need Perl version 5.10 for Coalesce operator (//)
 use Config::Simple;		# To parse husk.conf
 use Config::IniFiles;	# To parse here documents in hostgroups.conf
@@ -235,10 +238,9 @@ sub read_rules_file {
 	bomb(sprintf('Rules file does not exist: %s', $fname))
 		unless ( -f $fname );
 
-	local(*FILE);
-	open FILE, "<$fname" or bomb("Failed to read $fname");
-	my @lines = <FILE>;
-	close(FILE);
+  open my $fh, q{<}, $fname or bomb("Failed to read $fname");
+	my @lines = <$fh>;
+	close($fh);
 	$current_rules_file = $fname;
 	$line_cnt = 0;
 
@@ -1525,9 +1527,9 @@ sub load_interfaces {
 	bomb((caller(0))[3] . ' called without passing fname') unless $fname;
 
 	my @file_lines;
-	open(INTFILE, $fname) or bomb("Failed to read $fname");
-	@file_lines = <INTFILE>;
-	close(INTFILE);
+  open my $fh, q{<}, $fname or bomb("Failed to read $fname");
+	@file_lines = <$fh>;
+	close($fh);
 
 	InterfacesLoop:
 	foreach my $line (@file_lines) {
