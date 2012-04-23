@@ -62,7 +62,12 @@ IP6_CHECK="/proc/$$/net/ip6_tables_names"
 
 skip_confirm=0
 
-trap "rm -f $TFILE; rm -f $SFILE" EXIT 1 2 3 4 5 6 7 8 10 11 12 13 14 15
+function cleanup() {
+  rm -f "$TFILE"
+  m -f "$SFILE"
+  exit
+}
+trap cleanup INT TERM EXIT
 
 # Check we've got all our dependencies
 export PATH='/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin'
@@ -109,6 +114,7 @@ else
     echo 'Error compiling ruleset:' >&2
 	logger -t husk-fire -p user.warning -- 'Error during compilation :('
 	cat "$TFILE" >&2
+    cleanup
     exit 3
 fi
 
@@ -119,9 +125,11 @@ if iptables-save > "$SFILE" ; then
 else
 	if ! grep -q ipt /proc/modules 2>/dev/null ; then
 		echo "You don't appear to have iptables support in your kernel." >&2
+    cleanup
 		exit 5
 	else
 		echo "Unknown error saving current iptables ruleset." >&2
+    cleanup
 		exit 255
 	fi
 fi
@@ -155,6 +163,7 @@ if [ "$skip_confirm" == '0' ] ; then
 			fi
 			echo "Reverting to saved rules..." >&2
 			iptables-restore < "$SFILE";
+      cleanup
 			exit 255
 			;;
 	esac
