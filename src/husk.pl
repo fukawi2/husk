@@ -132,7 +132,7 @@ my $qr_kw_mac_addr	= qr/\bmac\s+($qr_mac_address)\b/io;
 my $qr_kw_noop		= qr/\b(all)\b/io;
 my $qr_call_any		= qr/_ANY(_|\b)/o;
 my $qr_call_me		= qr/_ME(_|\b)/o;
-my $qr_variable		= qr/\%(\w+)/io;
+my $qr_variable		= qr/(\$|\%)(\w+)/io;	# TODO: Depreciate % usage
 
 # Constants
 my %IPV4_BOGON_SOURCES = (
@@ -947,7 +947,7 @@ sub compile_call {
 		foreach ( @{$user_var{$var_name}} ) {
 			my $var_value = $_;
 			my $recurse_rule = $rule;
-			$recurse_rule =~ s/\s%$var_name\b/ $var_value /;
+			$recurse_rule =~ s/\s(\$|\%)$var_name\b/ $var_value /;	# TODO: decreciate '%' usage
 			compile_call(chain=>$chain, line=>$recurse_rule);
 		}
 		# No need to continue from here; Return early.
