@@ -88,7 +88,7 @@ my $qr_define_xzone	= qr/\Adefine\s+rules\s+($qr_int_name)\s+to\s+($qr_int_name)
 my $qr_define_sub	= qr/\Adefine\s+rules\s+(\w+)\b?\z/io;
 my $qr_add_chain	= qr/\Adefine\s+rules\s+(INPUT|FORWARD|OUTPUT)\b?\z/io;
 my $qr_def_variable	= qr/\Adefine\s+var(iable)?\s+(\w+)\b?\z/io;
-my $qr_tgt_builtins	= qr/\A(accept|drop|reject|log)\b/io;
+my $qr_tgt_builtins	= qr/\A(accept|drop|reject|log|return|skip|bypass)\b/io;
 my $qr_tgt_redirect	= qr/\A(redirect|trap)\b/io;
 my $qr_tgt_map		= qr/\Amap\b/io;
 my $qr_tgt_common	= qr/\Acommon\b/io;
@@ -959,7 +959,9 @@ sub compile_call {
 	# Extract the individual parts of the rule into our hash
 	if ( $rule =~ s/$qr_tgt_builtins//s ) {
 		# iptables inbuilt targets and UC them.
-		$criteria{target} = uc($1)
+		my $target = uc($1);
+		$target =~ s/(SKIP|BYPASS)/RETURN/g;
+		$criteria{target} = uc($1);
 	} elsif ( $rule =~ s/$qr_first_word// ) {;
 		# assume it's a user defined target (chain)
 		$criteria{target} = sprintf('%s%s', $udc_prefix, $1);
