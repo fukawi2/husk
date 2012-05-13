@@ -359,7 +359,7 @@ sub read_rules_file {
 					my $var_value = $_;
 					my $recurse_rule = $raw_rule;
 					$recurse_rule =~ s/\s(\$|\%)$var_name\b/ $var_value /;	# TODO: decreciate '%' usage
-					ipt4($raw_rule);
+					ipt4($recurse_rule);
 				}
 			} else {
 				ipt4($raw_rule);
@@ -383,7 +383,7 @@ sub read_rules_file {
 					my $var_value = $_;
 					my $recurse_rule = $raw_rule;
 					$recurse_rule =~ s/\s(\$|\%)$var_name\b/ $var_value /;	# TODO: decreciate '%' usage
-					ipt6($raw_rule);
+					ipt6($recurse_rule);
 				}
 			} else {
 				ipt6($raw_rule);
