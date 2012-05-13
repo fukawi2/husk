@@ -351,7 +351,19 @@ sub read_rules_file {
 
 			$raw_rule =~ s/%CHAIN%/$curr_chain/;
 			$raw_rule = sprintf('%s -m comment --comment "husk line %s"', $raw_rule, $line_cnt);
-			ipt4($raw_rule);
+
+			# duplicate the rule and substitute and variables used
+			if ( $raw_rule =~ m/\s$qr_variable\b/ ) {
+				my $var_name = $2;
+				foreach ( @{$user_var{$var_name}} ) {
+					my $var_value = $_;
+					my $recurse_rule = $raw_rule;
+					$recurse_rule =~ s/\s(\$|\%)$var_name\b/ $var_value /;	# TODO: decreciate '%' usage
+					ipt4($raw_rule);
+				}
+			} else {
+				ipt4($raw_rule);
+			}
 		}
 		elsif ( $line =~ s/$qr_tgt_ip6tables// ) {
 			# raw ip6tables command
@@ -363,7 +375,19 @@ sub read_rules_file {
 
 			$raw_rule =~ s/%CHAIN%/$curr_chain/;
 			$raw_rule = sprintf('%s -m comment --comment "husk line %s"', $raw_rule, $line_cnt);
-			ipt6($raw_rule);
+
+			# duplicate the rule and substitute and variables used
+			if ( $raw_rule =~ m/\s$qr_variable\b/ ) {
+				my $var_name = $2;
+				foreach ( @{$user_var{$var_name}} ) {
+					my $var_value = $_;
+					my $recurse_rule = $raw_rule;
+					$recurse_rule =~ s/\s(\$|\%)$var_name\b/ $var_value /;	# TODO: decreciate '%' usage
+					ipt6($raw_rule);
+				}
+			} else {
+				ipt6($raw_rule);
+			}
 		}
 		elsif ( $line =~ m/$qr_tgt_include/ ) {
 			# include another rules file
