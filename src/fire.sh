@@ -64,7 +64,7 @@ skip_confirm=0
 
 function cleanup() {
   rm -f "$TFILE"
-  m -f "$SFILE"
+  rm -f "$SFILE"
   exit
 }
 trap cleanup INT TERM EXIT
