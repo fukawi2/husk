@@ -943,7 +943,7 @@ sub compile_call {
 	# See if any variables are used in this rule. If so, call ourself
 	# recursively for each element in the var
 	if ( $rule =~ m/\s$qr_variable\b/ ) {
-		my $var_name = $1;
+		my $var_name = $2;
 		foreach ( @{$user_var{$var_name}} ) {
 			my $var_value = $_;
 			my $recurse_rule = $rule;
