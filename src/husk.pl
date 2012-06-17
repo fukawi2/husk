@@ -994,10 +994,20 @@ sub compile_call {
 		{$criteria{ipver} = lc($1)};
 	if ( $rule =~ s/$qr_kw_protocol//s )
 		{$criteria{proto} = lc($2)};
-	if ( $rule =~ s/$qr_kw_in_int//s )
-		{$criteria{i_name} = $interface{uc($2)}};
-	if ( $rule =~ s/$qr_kw_out_int//s )
-		{$criteria{o_name} = $interface{uc($2)}};
+	if ( $rule =~ s/$qr_kw_in_int//s ) {
+    my $int_alias = uc($2);                 # eg "NET"
+    my $int_name = $interface{$int_alias};  # eg "eth0"
+    bomb('Unknown "IN" interface: '.$int_alias)
+      unless defined($interface{$int_alias});
+    $criteria{i_name} = $int_name;
+  };
+	if ( $rule =~ s/$qr_kw_out_int//s ) {
+    my $int_alias = uc($2);                 # eg "NET"
+    my $int_name = $interface{$int_alias};  # eg "eth0"
+    bomb('Unknown "OUT" interface: '.$int_alias)
+      unless defined($interface{$int_alias});
+    $criteria{o_name} = $int_name;
+  };
 	if ( $rule =~ s/$qr_kw_src_addr//s )
 		{$criteria{src} = lc($1)};
 	if ( $rule =~ s/$qr_kw_dst_addr//s )
@@ -1201,8 +1211,13 @@ sub compile_nat {
 	# Hash to store all the individual parts of this rule
 	my %criteria;
 
-	if ( $rule =~ s/$qr_kw_in_int//s )
-		{ $criteria{in}	= uc($2) }
+  if ( $rule =~ s/$qr_kw_in_int//s ) {
+    my $int_alias = uc($2);                 # eg "NET"
+    my $int_name = $interface{$int_alias};  # eg "eth0"
+    bomb('Unknown "IN" interface: '.$int_alias)
+      unless defined($interface{$int_alias});
+    $criteria{in} = $int_name;
+  };
 	if ( $rule =~ s/$qr_kw_protocol//s )
 		{ $criteria{proto}	= lc($2) }
 	if ( $rule =~ s/$qr_kw_dst_addr//s )
@@ -1263,8 +1278,13 @@ sub compile_interception {
 	# Hash to store all the individual parts of this rule
 	my %criteria;
 
-	if ( $rule =~ s/$qr_kw_in_int//s )
-		{ $criteria{in}	= uc($2) }
+	if ( $rule =~ s/$qr_kw_in_int//s ) {
+    my $int_alias = uc($2);                 # eg "NET"
+    my $int_name = $interface{$int_alias};  # eg "eth0"
+    bomb('Unknown "IN" interface: '.$int_alias)
+      unless defined($interface{$int_alias});
+    $criteria{in} = $int_name;
+  };
 	if ( $rule =~ s/$qr_kw_protocol//s )
 		{ $criteria{proto}	= lc($2) }
 	if ( $rule =~ s/$qr_kw_dst_addr//s )
@@ -1293,14 +1313,14 @@ sub compile_interception {
 
 	my $ipt_rule = collapse_spaces(sprintf(
 		'-t nat -A PREROUTING %s %s %s %s %s -j REDIRECT %s',
-		$criteria{in}			? "-i $interface{$criteria{in}}"			: '',
-		$criteria{proto}		? "-p $criteria{proto}"						: '',
-		$criteria{inet_ext}		? "-d $criteria{inet_ext}"					: '',
-		$criteria{spt}			? "--sport $criteria{spt}"					: '',
-		$criteria{dpt}			? "--dport $criteria{dpt}"					: '',
-		$criteria{spts}			? "-m multiport --sports $criteria{spts}"	: '',
-		$criteria{dpts}			? "-m multiport --dports $criteria{dpts}"	: '',
-		$criteria{port_redir}	? "--to $criteria{port_redir}"				: '',
+		$criteria{in}         ? "-i $criteria{in}"                      : '',
+		$criteria{proto}      ? "-p $criteria{proto}"                   : '',
+		$criteria{inet_ext}   ? "-d $criteria{inet_ext}"                : '',
+		$criteria{spt}        ? "--sport $criteria{spt}"                : '',
+		$criteria{dpt}        ? "--dport $criteria{dpt}"                : '',
+		$criteria{spts}       ? "-m multiport --sports $criteria{spts}" : '',
+		$criteria{dpts}       ? "-m multiport --dports $criteria{dpts}" : '',
+		$criteria{port_redir} ? "--to $criteria{port_redir}"            : '',
 	));
 	ipt4($ipt_rule);
 
