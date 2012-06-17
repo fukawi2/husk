@@ -996,18 +996,22 @@ sub compile_call {
 		{$criteria{proto} = lc($2)};
 	if ( $rule =~ s/$qr_kw_in_int//s ) {
     my $int_alias = uc($2);                 # eg "NET"
-    my $int_name = $interface{$int_alias};  # eg "eth0"
-    bomb('Unknown "IN" interface: '.$int_alias)
-      unless defined($interface{$int_alias});
-    $criteria{i_name} = $int_name;
-  };
+    if ( defined($interface{$int_alias}) ) {
+      my $int_name = $interface{$int_alias};  # eg "eth0"
+      $criteria{i_name} = $int_name;
+    } else {
+      bomb('Unknown "IN" interface: '.$int_alias);
+    }
+  }
 	if ( $rule =~ s/$qr_kw_out_int//s ) {
     my $int_alias = uc($2);                 # eg "NET"
-    my $int_name = $interface{$int_alias};  # eg "eth0"
-    bomb('Unknown "OUT" interface: '.$int_alias)
-      unless defined($interface{$int_alias});
-    $criteria{o_name} = $int_name;
-  };
+    if ( defined($interface{$int_alias}) ) {
+      my $int_name = $interface{$int_alias};  # eg "eth0"
+      $criteria{o_name} = $int_name;
+    } else {
+      bomb('Unknown "OUT" interface: '.$int_alias);
+    }
+  }
 	if ( $rule =~ s/$qr_kw_src_addr//s )
 		{$criteria{src} = lc($1)};
 	if ( $rule =~ s/$qr_kw_dst_addr//s )
@@ -1213,11 +1217,13 @@ sub compile_nat {
 
   if ( $rule =~ s/$qr_kw_in_int//s ) {
     my $int_alias = uc($2);                 # eg "NET"
-    my $int_name = $interface{$int_alias};  # eg "eth0"
-    bomb('Unknown "IN" interface: '.$int_alias)
-      unless defined($interface{$int_alias});
-    $criteria{in} = $int_name;
-  };
+    if ( defined($interface{$int_alias}) ) {
+      my $int_name = $interface{$int_alias};  # eg "eth0"
+      $criteria{in} = $int_name;
+    } else {
+      bomb('Unknown "IN" interface: '.$int_alias);
+    }
+  }
 	if ( $rule =~ s/$qr_kw_protocol//s )
 		{ $criteria{proto}	= lc($2) }
 	if ( $rule =~ s/$qr_kw_dst_addr//s )
@@ -1280,11 +1286,13 @@ sub compile_interception {
 
 	if ( $rule =~ s/$qr_kw_in_int//s ) {
     my $int_alias = uc($2);                 # eg "NET"
-    my $int_name = $interface{$int_alias};  # eg "eth0"
-    bomb('Unknown "IN" interface: '.$int_alias)
-      unless defined($interface{$int_alias});
-    $criteria{in} = $int_name;
-  };
+    if ( defined($interface{$int_alias}) ) {
+      my $int_name = $interface{$int_alias};  # eg "eth0"
+      $criteria{in} = $int_name;
+    } else {
+      bomb('Unknown "IN" interface: '.$int_alias);
+    }
+  }
 	if ( $rule =~ s/$qr_kw_protocol//s )
 		{ $criteria{proto}	= lc($2) }
 	if ( $rule =~ s/$qr_kw_dst_addr//s )
