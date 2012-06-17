@@ -1253,7 +1253,7 @@ sub compile_nat {
 	my $ipt_rule;
 	# DNAT with the criteria defined
 	$ipt_rule = '-t nat -A PREROUTING';
-	$ipt_rule .= sprintf(' -i %s', $interface{$criteria{in}})               if ( defined($criteria{in}) );
+	$ipt_rule .= sprintf(' -i %s', $criteria{in})                           if ( defined($criteria{in}) );
 	$ipt_rule .= sprintf(' -d %s', $criteria{inet_ext})                     if ( defined($criteria{inet_ext}) );
 	$ipt_rule .= sprintf(' -p %s', $criteria{proto})                        if ( defined($criteria{proto}) );
 	$ipt_rule .= sprintf(' --sport %s', $criteria{sport_ext})               if ( defined($criteria{sport_ext}) );
