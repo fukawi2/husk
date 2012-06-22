@@ -6,11 +6,28 @@ fire - wrapper to assist applying husk compiled rules
 
 fire [OPTIONS]
 
-Brief description of default behavior here.
+'fire' is the recommended method to compile and apply a husk ruleset.
 
 =head1 DESCRIPTION
 
-Description here.
+'fire' will manage several things automatically:
+
+=over 4
+
+=item 1. Execute L<husk(1)> to compile your rules to iptables commands
+
+=item 2. Save the current iptables rules to a temporary backup
+
+=item 3. Apply the new rules
+
+=item 4. Ask you for confirmation the rules applied successfully
+
+=item 5a. If successful, attempt to save the new rules to the appropriate
+location for your distributions init scripts to load at next boot
+
+=item 5b. If unsuccessful, restore the previous ruleset from step 2
+
+=back
 
 =head1 OPTIONS
 
