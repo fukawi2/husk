@@ -28,8 +28,8 @@ function make_suggestions {
   grep -qPi '^\s*common\s+spoof'    $rfile || echo 'MISSING: common spoof LAN x.x.x.x/yy'
   grep -qPi '^\s*common\s+bogon'    $rfile || echo 'MISSING: common bogon NET'
   grep -qPi '^\s*common\s+portscan' $rfile || echo 'MISSING: common portscan NET'
-  grep -qPi '^\s*common\s+xmas'   $rfile || echo 'MISSING: common xmas NET'
-  grep -qPi '^\s*common\s+syn'    $rfile || echo 'MISSING: common syn NET'
+  grep -qPi '^\s*common\s+xmas'     $rfile || echo 'MISSING: common xmas NET'
+  grep -qPi '^\s*common\s+syn'      $rfile || echo 'MISSING: common syn NET'
   # check for use of sub-routines
   if ! grep -qPi '^\s*define\s+rules\s+\S+$' $rfile ; then
     echo '============================================================'
@@ -180,8 +180,8 @@ if [[ $? -eq 0 ]] ; then
     logger -t husk-fire -p user.info -- $msg
   fi
   if [[ $IPv6 -eq 1 ]] ; then
-    ip6chains=$( ( for T in filter mangle raw ;     do ip6tables -t $T -S ; done ) | grep -Pc '^-N' )
-    ip6rules=$( ( for T in filter mangle raw ;      do ip6tables -t $T -S ; done ) | grep -Pc '^-A' )
+    ip6chains=$( ( for T in filter mangle raw ; do ip6tables -t $T -S ; done ) | grep -Pc '^-N' )
+    ip6rules=$( ( for T in filter mangle raw ;  do ip6tables -t $T -S ; done ) | grep -Pc '^-A' )
     msg=$(printf 'IPv6: Loaded %u rules in %u chains.\n' $ip6rules $ip6chains)
     echo $msg
     logger -t husk-fire -p user.info -- $msg
