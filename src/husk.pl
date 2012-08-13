@@ -43,6 +43,7 @@ $conf_defaults{ipv6}        = 0;
 $conf_defaults{ignore_autoconf} = 0;
 $conf_defaults{old_state_track} = 0;
 $conf_defaults{no_ipv6_comments}= 0;
+$conf_defaults{log_bogons}  = 1;
 
 # runtime vars
 my ($conf_file, $conf_dir, $rules_file, $udc_prefix, $kw);
@@ -50,6 +51,7 @@ my ($iptables, $ip6tables);	# Paths to binaries
 my ($do_ipv4, $do_ipv6);	# Enable/Disable specific IP Versions
 my $ignore_autoconf;		# Ignore autoconf traffic before antispoof logging?
 my $old_state_track;		# Use 'state' module instead of 'conntrack'
+my $log_bogons;         # log bogons. if not, drop silently
 my $no_ipv6_comments;		# Do not include comments with IPv6 rules
 my $curr_chain;				# Name of current chain to append rules to
 my $current_rules_file;		# The filename of the rules currently being read (needs to be globally scoped to use in multiple subs)
@@ -574,36 +576,58 @@ sub close_rules {
 		# Populate the new chain with rules
 		if ( $do_ipv4 ) {
 			foreach my $bogon_src (keys %IPV4_BOGON_SOURCES) {
-				# LOG and DROP bad sources (bogons)
-				log_and_drop(
-					table=>		$BOGON_TABLE,
-					chain=>		$BOGON_CHAIN,
-					prefix=>	'BOGON',
-					ipv4=>		1,
-					ipv6=>		0,
-					criteria=>	sprintf(
-						'-s %s -m comment --comment "%s"',
-						$bogon_src,
-						$IPV4_BOGON_SOURCES{$bogon_src},
-				));
+        if ( $log_bogons ) {
+  				# LOG and DROP bad sources (bogons)
+	  			log_and_drop(
+		  			table=>		$BOGON_TABLE,
+			  		chain=>		$BOGON_CHAIN,
+				  	prefix=>	'BOGON',
+  					ipv4=>		1,
+	  				ipv6=>		0,
+		  			criteria=>	sprintf(
+			  			'-s %s -m comment --comment "%s"',
+				  		$bogon_src,
+					  	$IPV4_BOGON_SOURCES{$bogon_src},
+  				));
+        } else {
+          # silently drop bogons
+	  			ipt4(sprintf(
+              '-t %s -A %s -s %s -j DROP -m comment --comment "%s"',
+              $BOGON_TABLE,
+			  		  $BOGON_CHAIN,
+				  		$bogon_src,
+					  	$IPV4_BOGON_SOURCES{$bogon_src}
+          ));
+        }
 			}
 			# End with a default RETURN
 			ipt4(sprintf('-t %s -A %s -j RETURN', $BOGON_TABLE, $BOGON_CHAIN));
 		}
 		if ( $do_ipv6 ) {
 			foreach my $bogon_src (sort(keys %IPV6_BOGON_SOURCES)) {
-				# LOG and DROP bad sources (bogons)
-				log_and_drop(
-					table=>		$BOGON_TABLE,
-					chain=>		$BOGON_CHAIN,
-					prefix=>	'BOGON',
-					ipv4=>		0,
-					ipv6=>		1,
-					criteria=>	sprintf(
-						'-s %s -m comment --comment "%s"',
-						$bogon_src,
-						$IPV6_BOGON_SOURCES{$bogon_src},
-				));
+        if ( $log_bogons ) {
+          # LOG and DROP bad sources (bogons)
+          log_and_drop(
+            table=>		$BOGON_TABLE,
+            chain=>		$BOGON_CHAIN,
+            prefix=>	'BOGON',
+            ipv4=>		0,
+            ipv6=>		1,
+            criteria=>	sprintf(
+              '-s %s -m comment --comment "%s"',
+              $bogon_src,
+              $IPV6_BOGON_SOURCES{$bogon_src},
+          ));
+        } else {
+          # silently drop bogons
+	  			ipt6(sprintf(
+              '-t %s -A %s -s %s -j DROP -m comment --comment "%s"',
+              $BOGON_TABLE,
+			  		  $BOGON_CHAIN,
+				  		$bogon_src,
+					  	$IPV4_BOGON_SOURCES{$bogon_src}
+          ));
+        }
 			}
 			# End with a default RETURN
 			ipt6(sprintf('-t %s -A %s -j RETURN', $BOGON_TABLE, $BOGON_CHAIN));
@@ -1529,6 +1553,7 @@ sub read_config_file {
 	$do_ipv6			= coalesce($config{'default.ipv6'}, 			$conf_defaults{ipv6});
 	$ignore_autoconf	= coalesce($config{'default.ignore_autoconf'},	$conf_defaults{ignore_autoconf});
 	$old_state_track	= coalesce($config{'default.old_state_track'},	$conf_defaults{old_state_track});
+	$log_bogons 	    = coalesce($config{'default.log_bogons'},   	  $conf_defaults{log_bogons});
 	$no_ipv6_comments = coalesce($config{'default.no_ipv6_comments'},	$conf_defaults{no_ipv6_comments});
 	chomp($conf_dir);
 	chomp($iptables)			if ( $iptables );
@@ -1538,6 +1563,7 @@ sub read_config_file {
 	chomp($do_ipv6);
 	chomp($ignore_autoconf);
 	chomp($old_state_track);
+  chomp($log_bogons);
   chomp($no_ipv6_comments);
 
 	# validate config
