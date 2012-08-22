@@ -667,17 +667,21 @@ sub close_rules {
           $interface{$iface},
         ));
       }
-      # RETURN if the packet is sourced from Unspecified (::) to a multicast addr (valid in ipv6)
       if ( $do_ipv6 ) {
+        # RETURN if the packet is sourced from link-local. By definition, "link-local" can not detected as
+        # a spoofed address since it exists "locally" on every "link".
+        ipt6(sprintf(
+          '-t %s -A %s -s fe80::/10 -m comment --comment "bypass spoof protection for link-local" -j RETURN',
+          $SPOOF_TABLE,
+          $SPOOF_CHAIN
+        ));
+        # RETURN if the packet is sourced from Unspecified (::) to a multicast addr (valid in ipv6)
         ipt6(sprintf('-t %s -A %s -i %s -s :: -d ff00::/8 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
           $SPOOF_TABLE,
           $SPOOF_CHAIN,
           $interface{$iface},
         ));
       }
-
-      # RETURN if the packet is ip6 and src from link-local
-      push(@{$spoof_protection{$iface}}, 'fe80::/10') if ( $do_ipv6 );
 
       # RETURN if the packet is from a known-good source (as specified by user)
       foreach ( @{$spoof_protection{$iface}} ) {
@@ -691,6 +695,23 @@ sub close_rules {
             $interface{$iface},
             $src,
             $iface));
+
+          # don't accept the given source in any other interface either
+          # ie, if 192.168.0.0/24 is set to be valid on LAN, don't let it come in
+          # via the NET interface etc
+          log_and_drop(
+            table=>   $SPOOF_TABLE,
+            chain=>   $SPOOF_CHAIN,
+            prefix=>  sprintf('SPOOFED src %s', $src),
+            ipv4=>    1,
+            ipv6=>    0,
+            criteria=>  sprintf(
+              '-s %s ! -i %s -m comment --comment "%s only expected in %s"',
+              $src,
+              $interface{$iface},
+              $src,
+              $iface,
+          ));
         }
         elsif ( $src =~ m/$qr_ip6_cidr/ ) {
           # User has supplied an IPv6 address
@@ -701,6 +722,23 @@ sub close_rules {
             $interface{$iface},
             $src,
             $iface));
+
+          # don't accept the given source in any other interface either
+          # ie, if 192.168.0.0/24 is set to be valid on LAN, don't let it come in
+          # via the NET interface etc
+          log_and_drop(
+            table=>   $SPOOF_TABLE,
+            chain=>   $SPOOF_CHAIN,
+            prefix=>  sprintf('SPOOFED src %s', $src),
+            ipv4=>    0,
+            ipv6=>    1,
+            criteria=>  sprintf(
+              '-s %s ! -i %s -m comment --comment "%s only expected in %s"',
+              $src,
+              $interface{$iface},
+              $src,
+              $iface,
+          ));
         }
       }
 
@@ -727,15 +765,12 @@ sub close_rules {
     # End with a default RETURN
     ipt(sprintf('-t %s -A %s -j RETURN', $SPOOF_TABLE, $SPOOF_CHAIN));
 
-    # Jump the new chain for packets in the user-specified interfaces
-    foreach my $int (keys %spoof_protection) {
-      ipt(sprintf('-t %s -I PREROUTING -i %s -j %s -m comment --comment "spoof protection for %s"',
-          $SPOOF_TABLE,
-          $interface{$int},
-          $SPOOF_CHAIN,
-          $int,
-        ));
-    }
+    # Jump the new chain for all traffic so it will detect bad sources on
+    # all interfaces (not just on the interfaces the user has setup in rules.conf)
+    ipt(sprintf('-t %s -I PREROUTING -j %s -m comment --comment "common spoof protection"',
+        $SPOOF_TABLE,
+        $SPOOF_CHAIN,
+      ));
   }
 
   # SYN Protection
