@@ -662,10 +662,9 @@ sub close_rules {
         $SPOOF_CHAIN,
       ));
       # Silently DROP if the packet is from autoconfig addr and ignore_autoconf is true
-      ipt4(sprintf('-t %s -A %s -i %s -s 169.254.0.0/16 -m comment --comment "prevent autoconfig addr being logged as spoofed" -j DROP',
+      ipt4(sprintf('-t %s -A %s -s 169.254.0.0/16 -m comment --comment "prevent autoconfig addr being logged as spoofed" -j DROP',
         $SPOOF_TABLE,
         $SPOOF_CHAIN,
-        $interface{$iface},
       )) if ( $ignore_autoconf );
     }
     if ( $do_ipv6 ) {
