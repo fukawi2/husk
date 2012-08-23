@@ -652,12 +652,6 @@ sub close_rules {
 
     # RETURN if the packet is sourced from 0.0.0.0 (eg, DHCP Discover)
     if ( $do_ipv4 ) {
-      # nothing in lo is spoofed
-      ipt(sprintf('-t %s -A %s -i lo -m comment --comment "traffic in loopback never spoofed" -j RETURN',
-        $SPOOF_TABLE,
-        $SPOOF_CHAIN,
-      ));
-      # RETURN if the packet is IPv4 DHCP Discover
       ipt4(sprintf('-t %s -A %s -s 0.0.0.0 -p udp --sport 68 --dport 67 -m comment --comment "DHCP Discover bypasses spoof protection" -j RETURN',
         $SPOOF_TABLE,
         $SPOOF_CHAIN,
