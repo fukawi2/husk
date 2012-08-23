@@ -702,7 +702,7 @@ sub close_rules {
           log_and_drop(
             table=>   $SPOOF_TABLE,
             chain=>   $SPOOF_CHAIN,
-            prefix=>  sprintf('SPOOFED src %s', $src),
+            prefix=>  'SPOOFED src',
             ipv4=>    1,
             ipv6=>    0,
             criteria=>  sprintf(
@@ -729,7 +729,7 @@ sub close_rules {
           log_and_drop(
             table=>   $SPOOF_TABLE,
             chain=>   $SPOOF_CHAIN,
-            prefix=>  sprintf('SPOOFED src %s', $src),
+            prefix=>  'SPOOFED src',
             ipv4=>    0,
             ipv6=>    1,
             criteria=>  sprintf(
