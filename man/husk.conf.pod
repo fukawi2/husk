@@ -92,6 +92,15 @@ Known to affect: CentOS 5 (ip6tables only)
 
 Default: 0
 
+=item C<log_bogons>
+
+Sometimes you can't prevent or fix bogon traffic on the network you are
+connected to, for example, on a VPS connected to a shared hosting network. In
+this case, it may be desirable to you to disable logging of bogon traffic
+instead of creating a log entry everytime a packet from a bogon address is received.
+
+Default: 1
+
 =item C<iptables>
 
 The path to iptables binary on your system. Usually C</sbin/iptables> or
