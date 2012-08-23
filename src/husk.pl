@@ -650,39 +650,34 @@ sub close_rules {
     # Create a chain to log and drop
     ipt(sprintf('-t %s -N %s', $SPOOF_TABLE, $SPOOF_CHAIN));
 
-    foreach my $iface (keys %spoof_protection) {
-      # RETURN if the packet is sourced from 0.0.0.0 (eg, DHCP Discover)
-      if ( $do_ipv4 ) {
-        ipt4(sprintf('-t %s -A %s -i %s -s 0.0.0.0 -p udp --sport 68 --dport 67 -m comment --comment "DHCP Discover bypasses spoof protection" -j RETURN',
-          $SPOOF_TABLE,
-          $SPOOF_CHAIN,
-          $interface{$iface},
-        ));
-      }
+    # RETURN if the packet is sourced from 0.0.0.0 (eg, DHCP Discover)
+    if ( $do_ipv4 ) {
+      ipt4(sprintf('-t %s -A %s -s 0.0.0.0 -p udp --sport 68 --dport 67 -m comment --comment "DHCP Discover bypasses spoof protection" -j RETURN',
+        $SPOOF_TABLE,
+        $SPOOF_CHAIN,
+      ));
       # RETURN if the packet is sourced from Unspecified (0.0.0.0) to a multicast addr
-      if ( $do_ipv4 ) {
-        ipt4(sprintf('-t %s -A %s -i %s -s 0.0.0.0 -d 224.0.0.0/4 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
-          $SPOOF_TABLE,
-          $SPOOF_CHAIN,
-          $interface{$iface},
-        ));
-      }
-      if ( $do_ipv6 ) {
-        # RETURN if the packet is sourced from link-local. By definition, "link-local" can not detected as
-        # a spoofed address since it exists "locally" on every "link".
-        ipt6(sprintf(
-          '-t %s -A %s -s fe80::/10 -m comment --comment "bypass spoof protection for link-local" -j RETURN',
-          $SPOOF_TABLE,
-          $SPOOF_CHAIN
-        ));
-        # RETURN if the packet is sourced from Unspecified (::) to a multicast addr (valid in ipv6)
-        ipt6(sprintf('-t %s -A %s -i %s -s :: -d ff00::/8 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
-          $SPOOF_TABLE,
-          $SPOOF_CHAIN,
-          $interface{$iface},
-        ));
-      }
+      ipt4(sprintf('-t %s -A %s -s 0.0.0.0 -d 224.0.0.0/4 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
+        $SPOOF_TABLE,
+        $SPOOF_CHAIN,
+      ));
+    }
+    if ( $do_ipv6 ) {
+      # RETURN if the packet is sourced from link-local. By definition, "link-local" can not detected as
+      # a spoofed address since it exists "locally" on every "link".
+      ipt6(sprintf(
+        '-t %s -A %s -s fe80::/10 -m comment --comment "bypass spoof protection for link-local" -j RETURN',
+        $SPOOF_TABLE,
+        $SPOOF_CHAIN
+      ));
+      # RETURN if the packet is sourced from Unspecified (::) to a multicast addr (valid in ipv6)
+      ipt6(sprintf('-t %s -A %s -s :: -d ff00::/8 -m comment --comment "Bypass from Unspecified to Multicast" -j RETURN',
+        $SPOOF_TABLE,
+        $SPOOF_CHAIN,
+      ));
+    }
 
+    foreach my $iface (keys %spoof_protection) {
       # RETURN if the packet is from a known-good source (as specified by user)
       foreach ( @{$spoof_protection{$iface}} ) {
         my $src = $_;
@@ -764,14 +759,13 @@ sub close_rules {
     }
     # End with a default RETURN
     ipt(sprintf('-t %s -A %s -j RETURN', $SPOOF_TABLE, $SPOOF_CHAIN));
-
-    # Jump the new chain for all traffic so it will detect bad sources on
-    # all interfaces (not just on the interfaces the user has setup in rules.conf)
-    ipt(sprintf('-t %s -I PREROUTING -j %s -m comment --comment "common spoof protection"',
-        $SPOOF_TABLE,
-        $SPOOF_CHAIN,
-      ));
   }
+  # Jump the new chain for all traffic so it will detect bad sources on
+  # all interfaces (not just on the interfaces the user has setup in rules.conf)
+  ipt(sprintf('-t %s -I PREROUTING -j %s -m comment --comment "common spoof protection"',
+      $SPOOF_TABLE,
+      $SPOOF_CHAIN,
+    ));
 
   # SYN Protection
   if ( scalar(@syn_protection) ) {
