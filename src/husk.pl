@@ -652,12 +652,6 @@ sub close_rules {
 
     # RETURN if the packet is sourced from 0.0.0.0 (eg, DHCP Discover)
     if ( $do_ipv4 ) {
-      # nothing in lo is spoofed
-      ipt(sprintf('-t %s -A %s -i lo -m comment --comment "traffic in loopback never spoofed" -j RETURN',
-        $SPOOF_TABLE,
-        $SPOOF_CHAIN,
-      ));
-      # RETURN if the packet is IPv4 DHCP Discover
       ipt4(sprintf('-t %s -A %s -s 0.0.0.0 -p udp --sport 68 --dport 67 -m comment --comment "DHCP Discover bypasses spoof protection" -j RETURN',
         $SPOOF_TABLE,
         $SPOOF_CHAIN,
@@ -701,23 +695,6 @@ sub close_rules {
             $interface{$iface},
             $src,
             $iface));
-
-          # don't accept the given source in any other interface either
-          # ie, if 192.168.0.0/24 is set to be valid on LAN, don't let it come in
-          # via the NET interface etc
-          log_and_drop(
-            table=>   $SPOOF_TABLE,
-            chain=>   $SPOOF_CHAIN,
-            prefix=>  'SPOOFED src',
-            ipv4=>    1,
-            ipv6=>    0,
-            criteria=>  sprintf(
-              '-s %s ! -i %s -m comment --comment "%s only expected in %s"',
-              $src,
-              $interface{$iface},
-              $src,
-              $iface,
-          ));
         }
         elsif ( $src =~ m/$qr_ip6_cidr/ ) {
           # User has supplied an IPv6 address
@@ -728,23 +705,6 @@ sub close_rules {
             $interface{$iface},
             $src,
             $iface));
-
-          # don't accept the given source in any other interface either
-          # ie, if 192.168.0.0/24 is set to be valid on LAN, don't let it come in
-          # via the NET interface etc
-          log_and_drop(
-            table=>   $SPOOF_TABLE,
-            chain=>   $SPOOF_CHAIN,
-            prefix=>  'SPOOFED src',
-            ipv4=>    0,
-            ipv6=>    1,
-            criteria=>  sprintf(
-              '-s %s ! -i %s -m comment --comment "%s only expected in %s"',
-              $src,
-              $interface{$iface},
-              $src,
-              $iface,
-          ));
         }
       }
 
@@ -763,13 +723,17 @@ sub close_rules {
     }
     # End with a default RETURN
     ipt(sprintf('-t %s -A %s -j RETURN', $SPOOF_TABLE, $SPOOF_CHAIN));
+
+    # Jump the new chain for packets in the user-specified interfaces
+    foreach my $int (keys %spoof_protection) {
+      ipt(sprintf('-t %s -I PREROUTING -i %s -j %s -m comment --comment "spoof protection for %s"',
+          $SPOOF_TABLE,
+          $interface{$int},
+          $SPOOF_CHAIN,
+          $int,
+        ));
+    }
   }
-  # Jump the new chain for all traffic so it will detect bad sources on
-  # all interfaces (not just on the interfaces the user has setup in rules.conf)
-  ipt(sprintf('-t %s -I PREROUTING -j %s -m comment --comment "common spoof protection"',
-      $SPOOF_TABLE,
-      $SPOOF_CHAIN,
-    ));
 
   # SYN Protection
   if ( scalar(@syn_protection) ) {
