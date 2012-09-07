@@ -195,10 +195,8 @@ fi
 [[ -f '/etc/debian_version' ]]  && file6='/etc/ip6tables.rules'
 [[ -f '/etc/arch-release' ]]    && file4='/etc/iptables/iptables.rules'
 [[ -f '/etc/arch-release' ]]    && file6='/etc/iptables/ip6tables.rules'
-if [[ -n "$file4" -a -n "$file6" ]] ; then
+if [[ -n "$file4" && -n "$file6" ]] ; then
   # we have somewhere to save the rules to
-  [[ ! -n "$(which iptables-save)" ]] && { echo "WARNING: Unable to save rules; could not locate iptables-save"; break; }
-  [[ ! -n "$(which ip6tables-save)" ]] && { echo "WARNING: Unable to save rules; could not locate ip6tables-save"; break; }
   iptables-save > $file4
   ip6tables-save > $file6
 else
