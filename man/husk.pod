@@ -90,7 +90,7 @@ Show the version and exit.
 =head1 CONFIGURATION
 
 By default, configuration lives in C</etc/husk/husk.conf>. Refer to man page
-L<husk.conf(5)> for full description of configuration file.
+L<husk.conf> for full description of configuration file.
 
 =head1 EXAMPLES
 
