@@ -478,7 +478,3 @@ fix syntax error and redundant checks in last commit
 fix some indenting
 ios helper; add port 5223 for push notifications
 add new bogon src 100.64.0.0/10
-updated CHANGES file for commits between ver_0.9.9 to ver_0.9.10
-syntax updates for man pages to correct warnings
-Merge branch 'develop'
-updated CHANGES file for commits between ver_0.9.9 to ver_0.9.10
