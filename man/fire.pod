@@ -22,10 +22,9 @@ fire [OPTIONS]
 
 =item 4. Ask you for confirmation the rules applied successfully
 
-=item 5a. If successful, attempt to save the new rules to the appropriate
-location for your distributions init scripts to load at next boot
-
-=item 5b. If unsuccessful, restore the previous ruleset from step 2
+=item 5. If successful, attempt to save the new rules to the appropriate
+location for your distributions init scripts to load at next boot.
+If unsuccessful, restore the previous ruleset from step 2.
 
 =back
 
