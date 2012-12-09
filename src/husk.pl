@@ -141,6 +141,7 @@ my %IPV4_BOGON_SOURCES = (
   '10.0.0.0/8'      => 'Private (RFC-1918)',
   '172.16.0.0/12'   => 'Private (RFC-1918)',
   '192.168.0.0/16'  => 'Private (RFC-1918)',
+  '100.64.0.0/10'   => 'CGN Shared Address Space (RFC-6598)',
   '169.254.0.0/16'  => 'Link Local (RFC-3927)',
   '127.0.0.0/8'     => 'Loopback (RFC-1122)',
   '255.255.255.255' => 'Broadcast (RFC-919)',
@@ -863,14 +864,14 @@ sub close_rules {
   # We want to jump any chains to/from the
   # special 'ANY' interface before all
   # other 'call' jumps.
-    foreach my $xzone_rule (sort(keys %xzone_calls)) {
+  foreach my $xzone_rule (sort(keys %xzone_calls)) {
     if ( $xzone_rule =~ m/$qr_call_any/ ) {
       ipt($xzone_calls{$xzone_rule});
       delete $xzone_calls{$xzone_rule};
     }
   }
   # Jump whatever else is left
-    foreach my $xzone_rule ( sort(keys %xzone_calls )) {
+  foreach my $xzone_rule ( sort(keys %xzone_calls )) {
     ipt($xzone_calls{$xzone_rule});
   }
 
