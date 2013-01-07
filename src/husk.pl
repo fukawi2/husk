@@ -626,7 +626,7 @@ sub close_rules {
               $BOGON_TABLE,
               $BOGON_CHAIN,
               $bogon_src,
-              $IPV4_BOGON_SOURCES{$bogon_src}
+              $IPV6_BOGON_SOURCES{$bogon_src}
           ));
         }
       }
