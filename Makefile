@@ -29,8 +29,9 @@ all: install
 
 install: test bin docs config
 	# install the actual scripts
-	install -D -m 0755 src/$(PROJECT).pl $(DESTDIR)$(D_BIN)/$(PROJECT)
-	install -D -m 0755 src/fire.sh $(DESTDIR)$(D_BIN)/fire
+	install -D -m 0755 src/$(PROJECT).pl	$(DESTDIR)$(D_BIN)/$(PROJECT)
+	install -D -m 0755 src/fire.sh				$(DESTDIR)$(D_BIN)/fire
+	install -D -m 0755 src/fwlog2rule.pl	$(DESTDIR)$(D_BIN)/fwlog2rule
 	# install documentation
 	for f in $(F_DOCS) ; do \
 		install -D -m 0644 $$f $(DESTDIR)$(D_DOC)/$$f || exit 1 ; \
@@ -52,6 +53,7 @@ fallback:
 	mkdir $(fb_dir)
 	cp $(DESTDIR)$(D_BIN)/$(PROJECT) $(fb_dir)/
 	cp $(DESTDIR)$(D_BIN)/fire $(fb_dir)/
+	cp $(DESTDIR)$(D_BIN)/fwlog2rule.pl $(fb_dir)/
 	for f in $(F_DOCS) ; do \
 		cp $(DESTDIR)$(D_DOC)/$$f $(fb_dir)/ || exit 1 ; \
 	done
@@ -86,21 +88,24 @@ test:
 
 	@echo "==> Checking for valid script syntax"
 	@perl -c src/husk.pl
+	@perl -c src/fwlog2rule.pl
 	@bash -n src/fire.sh
 
 	@echo "==> It all looks good Captain!"
 
-bin: test src/$(PROJECT).pl src/fire.sh
+bin: test src/$(PROJECT).pl src/fire.sh src/fwlog2rule.pl
 
 docs: $(F_DOCS) $(F_MAN)
 	# build man pages
 	pod2man --name=husk man/husk.pod man/husk.1.man
 	pod2man --name=fire man/fire.pod man/fire.1.man
+	pod2man --name=fwlog2rule man/fwlog2rule.pod man/fwlog2rule.1.man
 	pod2man --name=husk.conf man/husk.conf.pod man/husk.conf.5.man
 
 	# build html pages
 	pod2html --infile=man/husk.pod > man/husk.html
 	pod2html --infile=man/fire.pod > man/fire.html
+	pod2html --infile=man/fwlog2rule.pod > man/fwlog2rule.html
 	pod2html --infile=man/husk.conf.pod > man/husk.conf.html
 	rm -f pod2htm*.tmp
 
@@ -121,6 +126,7 @@ uninstall:
 	rm -f $(DESTDIR)$(D_MAN)/man5/husk.conf.5p
 	rm -f $(DESTDIR)$(D_BIN)/$(PROJECT)
 	rm -f $(DESTDIR)$(D_BIN)/fire
+	rm -f $(DESTDIR)$(D_BIN)/fwlog2rule
 	rm -f $(DESTDIR)$(D_DOC)/*
 	rmdir $(DESTDIR)$(D_DOC)/
 	@echo "Leaving '$(DESTDIR)$(D_CNF)' untouched"
