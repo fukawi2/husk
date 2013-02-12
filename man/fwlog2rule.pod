@@ -1,0 +1,79 @@
+=head1 NAME
+
+fwlog2rule - convert kernel netfilter logs to husk rule syntax
+
+=head1 SYNOPSIS
+
+fwlog2rule [OPTIONS]
+
+'fwlog2rule' reads from standard input and write husk rules to match
+netfilter logs
+
+=head1 DESCRIPTION
+
+When debugging firewall blocks, fwlog2rule will automatically convert a kernel
+netfilter log into an appropriate husk rule for inclusion in your husk ruleset.
+
+fwlog2rule currently only reads from standard input. The recommended usage is
+to extract the relevant blocks from your firewall logs using standard utilities
+and pipe that data to fwlog2rule.
+
+  grep 192.168.0.100 /var/log/messages | tail -n1 | fwlog2rule
+
+Modify your grep (or other filtering) command to only feed fwlog2rule the
+appropriate lines for what you want rules for.
+
+The output rule is made a specific as possible; you may want (or need) to remove
+some of the criteria to make it a usable rule.
+
+=head1 EXAMPLE
+
+If the last line logged in your system for 172.16.3.1 is this:
+
+  Jan 29 12:27:35 neo kernel: [33219.514005] [UFW AUDIT] IN= OUT=eth0 SRC=172.16.3.2 DST=74.125.237.150 LEN=52 TOS=0x00 PREC=0x00 TTL=64 ID=423 DF PROTO=TCP SPT=38581 DPT=443 WINDOW=814 RES=0x00 SYN URGP=0
+
+This command:
+
+  grep 172.16.3.1 /var/log/messages | tail -n1 | fwlog2rule
+
+Would return this rule:
+
+  accept ip 4 source address 172.16.3.2 destination address 74.125.237.150 protocol tcp source port 38581 port 443
+
+=head1 OPTIONS
+
+None at present.
+
+=head1 BUGS
+
+=head2 Reporting Bugs
+
+Email bug reports to L<fukawi2@gmail.com|mailto://fukawi2@gmail.com>
+
+=head2 Known Bugs
+
+Probably some...
+
+=head1 ACKNOWLEDGEMENTS
+
+The idea for this script came from a presentation at linux.conf.au where the
+selinux I<audit2allow> command was talked about.
+
+=head1 LICENSE
+
+Copyright 2013 Phillip Smith
+
+Made available under the conditions of the GPLv2. This is free software; refer
+to the F<LICENSE> file for details.
+
+=head1 AVAILABILITY
+
+L<http://www.huskfw.info/>
+
+L<http://github.com/fukawi2/husk/>
+
+=head1 AUTHOR
+
+Phillip Smith aka fukawi2
+
+=cut

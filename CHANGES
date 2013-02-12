@@ -315,3 +315,113 @@ updated CHANGES file for commits between ver_0.9.8 to ver_0.9.9
 updated CHANGES file for commits between ver_0.9.8 to ver_0.9.9
 Revert "updated CHANGES file for commits between ver_0.9.8 to ver_0.9.9"
 Revert "updated CHANGES file for commits between ver_0.9.8 to ver_0.9.9"
+<<<<<<< HEAD
+=======
+* ==> Version 0.9.10
+allow disabling of ipv6 comments via config file
+updated docs and fire script to reflect last commit
+exit fire script if unknown option passed
+fix typo in logging output of fire script
+update errors and ommisions in the example standalone rules
+comment bogon rule in sample rules to avoid accidental lockout
+fire; fix broken --no-confirm option by changing to -f
+fix pod docs for fire script
+screwed up the -f option
+inverse logic fix
+add vmbrX as valid interface identifier
+fix the way we read files to suit best practice
+remove subroutine prototyping
+fix minimum version requirements
+fix use of grep() to match best practices
+add explicit return to end of all functions
+fix usage of boolean operators in comparison
+rename "warn" to "emit_warn" to avoid namespace conflict
+fix syntax when using Config::Simple
+convert tabs to spaces
+make sure we cleanup after outself properly at exit
+fire; fix indenting
+support for using RETURN target
+fix typo in fire.sh
+change variable usage to prefix with $ instead of %
+fix for last commit
+allow variables to be used in "iptables" lines
+fix for last commit
+validate "in" and "out" interfaces when used in rules
+fix for last commit to avoid uninitialized variables
+fix uninitialized value within %interface
+update man page for fire(1)
+add support for dropping bogons silently
+retab source files
+Merge branch 'develop'
+updated husk.conf man page
+update to spoof protection rules
+rescoping some actions for last commit
+rescope where autoconfing address drop occurs
+adjust log prefix for wrong iface src
+Merge branch 'develop'
+bypass spoof protection for lo interface
+Revert "bypass spoof protection for lo interface"
+Revert "adjust log prefix for wrong iface src"
+Revert "rescope where autoconfing address drop occurs"
+Revert "update to spoof protection rules"
+move autoconf address drop to top of spoof chain
+correct syntax error in last commit
+Merge branch 'develop'
+* ==> Version 0.9.10
+allow disabling of ipv6 comments via config file
+updated docs and fire script to reflect last commit
+exit fire script if unknown option passed
+fix typo in logging output of fire script
+update errors and ommisions in the example standalone rules
+comment bogon rule in sample rules to avoid accidental lockout
+fire; fix broken --no-confirm option by changing to -f
+fix pod docs for fire script
+screwed up the -f option
+inverse logic fix
+add vmbrX as valid interface identifier
+fix the way we read files to suit best practice
+remove subroutine prototyping
+fix minimum version requirements
+fix use of grep() to match best practices
+add explicit return to end of all functions
+fix usage of boolean operators in comparison
+rename "warn" to "emit_warn" to avoid namespace conflict
+fix syntax when using Config::Simple
+convert tabs to spaces
+make sure we cleanup after outself properly at exit
+fire; fix indenting
+support for using RETURN target
+fix typo in fire.sh
+change variable usage to prefix with $ instead of %
+fix for last commit
+allow variables to be used in "iptables" lines
+fix for last commit
+validate "in" and "out" interfaces when used in rules
+fix for last commit to avoid uninitialized variables
+fix uninitialized value within %interface
+update man page for fire(1)
+add support for dropping bogons silently
+retab source files
+Merge branch 'develop'
+updated husk.conf man page
+update to spoof protection rules
+rescoping some actions for last commit
+rescope where autoconfing address drop occurs
+adjust log prefix for wrong iface src
+Merge branch 'develop'
+bypass spoof protection for lo interface
+Revert "bypass spoof protection for lo interface"
+Revert "adjust log prefix for wrong iface src"
+Revert "rescope where autoconfing address drop occurs"
+Revert "update to spoof protection rules"
+move autoconf address drop to top of spoof chain
+correct syntax error in last commit
+Merge branch 'develop'
+try to be more flexible when saving rules to /etc by not depending on init scripts
+fix syntax error and redundant checks in last commit
+fix some indenting
+ios helper; add port 5223 for push notifications
+add new bogon src 100.64.0.0/10
+updated CHANGES file for commits between ver_0.9.9 to ver_0.9.10
+syntax updates for man pages to correct warnings
+Merge branch 'develop'
