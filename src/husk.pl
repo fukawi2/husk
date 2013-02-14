@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright (C) 2010-2012 Phillip Smith
+# Copyright (C) 2010-2013 Phillip Smith
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,15 +43,18 @@ $conf_defaults{ipv6}        = 0;
 $conf_defaults{ignore_autoconf} = 0;
 $conf_defaults{old_state_track} = 0;
 $conf_defaults{no_ipv6_comments}= 0;
-$conf_defaults{log_bogons}  = 1;
+$conf_defaults{log_bogons}    = 1;
+$conf_defaults{output_format} = 'restore';
 
 # runtime vars
 my ($conf_file, $conf_dir, $rules_file, $udc_prefix, $kw);
 my ($iptables, $ip6tables); # Paths to binaries
 my ($do_ipv4, $do_ipv6);    # Enable/Disable specific IP Versions
+my ($output4, $output6);    # What rules to output
 my $ignore_autoconf;        # Ignore autoconf traffic before antispoof logging?
 my $old_state_track;        # Use 'state' module instead of 'conntrack'
 my $log_bogons;             # log bogons. if not, drop silently
+my $output_format;          # format to output compiled ruleset
 my $no_ipv6_comments;       # Do not include comments with IPv6 rules
 my $curr_chain;             # Name of current chain to append rules to
 my $current_rules_file;     # The filename of the rules currently being read (needs to be globally scoped to use in multiple subs)
@@ -83,7 +86,7 @@ my $qr_ip4_address  = qr/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[
 my $qr_ip4_cidr     = qr/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/([0-9]{1,2}))?/o;
 my $qr_ip6_address  = qr/${\&make_ipv6_regex()}/io;
 my $qr_ip6_cidr     = qr/${\&make_ipv6_regex()}(\/[0-9]{1,3})?/io;
-my $qr_if_names     = qr/((eth|wlan|ppp|bond|tun|tap|sit|(xen|vm)?br|vif)(\d+|\+)((\.|:)\d+)?|lo|xen[A-Z]+)/io;
+my $qr_if_names     = qr/\S+/io;  # can't be accurate because too many variations with systemd 197 "persistent" naming
 my $qr_int_name     = qr/\w+/o;
 my $qr_first_word   = qr/\A(\w+)/o;
 my $qr_define_xzone = qr/\Adefine\s+rules\s+($qr_int_name)\s+to\s+($qr_int_name)\z/io;
@@ -207,6 +210,13 @@ $conf_file = coalesce($conf_file, '/etc/husk/husk.conf');
 read_config_file(fname=>$conf_file);
 load_addrgroups(fname=>sprintf('%s/addr_groups.conf', $conf_dir));
 load_interfaces(fname=>sprintf('%s/interfaces.conf', $conf_dir));
+
+# sanity check
+if ( defined($output_format) and $output_format =~ m/\Arestore\z/i ) {
+  if ( ($output4 and $output6) or (!$output4 and !$output6) ) {
+    bomb('-4 and -6 are mutually exclusive when output is "restore"');
+  }
+}
 
 # Start Processing
 {
@@ -626,7 +636,7 @@ sub close_rules {
               $BOGON_TABLE,
               $BOGON_CHAIN,
               $bogon_src,
-              $IPV4_BOGON_SOURCES{$bogon_src}
+              $IPV6_BOGON_SOURCES{$bogon_src}
           ));
         }
       }
@@ -892,7 +902,7 @@ sub close_rules {
 sub print_header {
   print "#\n";
   printf("# husk version %s\n", $VERSION);
-  print "# Copyright (C) 2010-2012 Phillip Smith\n";
+  print "# Copyright (C) 2010-2013 Phillip Smith\n";
   print "# This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are\n";
   print "# welcome to use and redistribute it under the conditions of the GPL license version 2\n";
   print "# See the \"COPYING\" file for further details.\n";
@@ -906,30 +916,148 @@ sub generate_output {
   printf("# Ruleset compiled %s\n", timestamp());
   print "#\n";
 
-  # iptables (IPv4) rules)
-  if ( $do_ipv4 ) {
-    print "### BEGIN IPv4 RULES ###\n";
-    foreach my $r (@ipv4_rules) {
-      if ( $old_state_track == 1 ) {
-        $r =~ s/-m conntrack --ctstate/-m state --state/g;
-      }
+  if ( $output_format =~ m/\Arestore\z/i ) {
+    ###
+    ### iptables-restore script
+    ###
 
-      printf("%s %s\n", $iptables, $r);
+    # make a hash-reference to the array we need to spit out
+    my $spit_this;
+    if ( $output4 ) {
+      $spit_this = \@ipv4_rules;
+    } elsif ( $output6 ) {
+      $spit_this = \@ipv6_rules;
+    } else {
+      bomb('Can not output IPv4 and IPv6 rules together when output
+        format is "restore"');
     }
-    print "### END IPv4 RULES ###\n\n";
-  }
-  # ip6tables (IPv6) rules
-  if ( $do_ipv6 ) {
-    print "### BEGIN IPv6 RULES ###\n";
-    foreach my $r ( @ipv6_rules ) {
-      if ( $old_state_track == 1 ) {
-        $r =~ s/-m conntrack --ctstate/-m state --state/g;
-      }
 
-      printf("%s %s\n", $ip6tables, $r);
+    my ($table, %split_rules, %chain_names, %policy);
+    foreach my $r ( @{$spit_this} ) {
+      # 1. split the output rules array into an array for each table (filter,
+      #    nat, mangle and raw). also itemize each chain name into a hash per
+      #    table.
+
+      # iptables-restore does not like single-quotes so we need to
+      # replace any instances with double-quotes
+      $r =~ s/'/"/g;
+
+      if ($r =~ m/(-t (filter|nat|mangle|raw))? ?(-[AI].*)$/g) {
+        # this rule is a rule; add it to the appropriate array in the hash
+        my $t = 'filter';   # Default; could be overwritten on next line
+        $t = $2 if $2;
+        push(@{$split_rules{$t}}, $3);
+      } elsif ($r =~ m/-P (INPUT|FORWARD|OUTPUT) (DROP|ACCEPT)$/g) {
+        # this is a chain policy
+        $policy{$1} = $2;
+      } elsif ($r =~ m/(-t (filter|nat|mangle|raw) )?-N (\S+)$/g) {
+        # creating a new chain
+        $table = coalesce($2, 'filter');
+        push(@{$chain_names{$table}}, $3);
+      } elsif ($r =~ m/(-t (filter|nat|mangle|raw) )?(-[XFZ] (\S+)( \S+))?$/g) {
+        # we don't need to do anything with the Zero/Flush/Delete rules
+        1;
+      } else {
+        # something we dont recognize; throw error
+        bomb('Internal error converting rules to restore script.
+          This is a bug, please report it: '.$r);
+      }
     }
-    print "### END IPv6 RULES ###\n\n";
+
+    ### now we can start generating some output
+    ### filter table ###
+    print "*filter\n";
+    foreach my $chain ( qw(INPUT FORWARD OUTPUT) ) {
+      $policy{$chain} = 'DROP' unless $policy{$chain};
+      printf(":%s %s [0:0]\n", $chain, $policy{$chain});
+    }
+    foreach my $udc_name ( @{$chain_names{'filter'}} ) {
+      printf(":%s - [0:0]\n", $udc_name);
+    }
+    foreach my $rule (@{$split_rules{'filter'}}) {
+      print "$rule\n";
+    }
+    print "COMMIT\n";
+    if ( $output4 ) {
+      ### nat table ###
+      print "*nat\n";
+      foreach my $chain ( qw(PREROUTING POSTROUTING OUTPUT) ) {
+        # set the policy for all chains in all tables (except 'filter') to ACCEPT
+        printf(":%s ACCEPT [0:0]\n", $chain);
+      }
+      foreach my $udc_name ( @{$chain_names{'nat'}} ) {
+        printf(":%s - [0:0]\n", $udc_name);
+      }
+      foreach my $rule ( @{$split_rules{'nat'}} ) {
+        print "$rule\n";
+      }
+      print "COMMIT\n";
+    }
+    ### mangle table ###
+    print "*mangle\n";
+    foreach my $chain ( qw(INPUT FORWARD OUTPUT PREROUTING POSTROUTING) ) {
+      # set the policy for all chains in all tables (except 'filter') to ACCEPT
+      printf(":%s ACCEPT [0:0]\n", $chain);
+    }
+    foreach my $udc_name ( @{$chain_names{'mangle'}} ) {
+      printf(":%s - [0:0]\n", $udc_name);
+    }
+    foreach my $rule ( @{$split_rules{'mangle'}} ) {
+      print "$rule\n";
+    }
+    print "COMMIT\n";
+    # raw table
+    print "*raw\n";
+    foreach my $chain ( qw(PREROUTING OUTPUT) ) {
+      # set the policy for all chains in all tables (except 'filter') to ACCEPT
+      printf(":%s ACCEPT [0:0]\n", $chain);
+    }
+    foreach my $udc_name ( @{$chain_names{'raw'}} ) {
+      printf(":%s - [0:0]\n", $udc_name);
+    }
+    foreach my $rule ( @{$split_rules{'raw'}} ) {
+      print "$rule\n";
+    }
+    print "COMMIT\n";
+
+    # all done!
+    return 1;
+  } elsif ( $output_format =~ m/\Abash\z/i ) {
+    ###
+    ### bash script
+    ###
+
+    # iptables (IPv4) rules)
+    if ( $do_ipv4 ) {
+      print "### BEGIN IPv4 RULES ###\n";
+      foreach my $r (@ipv4_rules) {
+        if ( $old_state_track == 1 ) {
+          $r =~ s/-m conntrack --ctstate/-m state --state/g;
+        }
+
+        printf("%s %s\n", $iptables, $r);
+      }
+      print "### END IPv4 RULES ###\n\n";
+    }
+    # ip6tables (IPv6) rules
+    if ( $do_ipv6 ) {
+      print "### BEGIN IPv6 RULES ###\n";
+      foreach my $r ( @ipv6_rules ) {
+        if ( $old_state_track == 1 ) {
+          $r =~ s/-m conntrack --ctstate/-m state --state/g;
+        }
+
+        printf("%s %s\n", $ip6tables, $r);
+      }
+      print "### END IPv6 RULES ###\n\n";
+    }
+
+    # all done!
+    return 1;
   }
+
+  # should not get here; we return sucess at the end of each if
+  # block above so to get here, none of them have been true
   return;
 }
 
@@ -1542,17 +1670,21 @@ sub read_config_file {
   if ( $cfg ) {
     %config = $cfg->vars();
   }
-  $conf_dir         = coalesce($config{'default.conf_dir'},         $conf_defaults{conf_dir});
-  $rules_file       = coalesce($config{'default.rules_file'},       $conf_defaults{rules_file});
-  $iptables         = coalesce($config{'default.iptables'},         $conf_defaults{iptables});
-  $ip6tables        = coalesce($config{'default.ip6tables'},        $conf_defaults{ip6tables});
-  $udc_prefix       = coalesce($config{'default.udc_prefix'},       $conf_defaults{udc_prefix});
-  $do_ipv4          = coalesce($config{'default.ipv4'},             $conf_defaults{ipv4});
-  $do_ipv6          = coalesce($config{'default.ipv6'},             $conf_defaults{ipv6});
-  $ignore_autoconf  = coalesce($config{'default.ignore_autoconf'},  $conf_defaults{ignore_autoconf});
-  $old_state_track  = coalesce($config{'default.old_state_track'},  $conf_defaults{old_state_track});
-  $log_bogons       = coalesce($config{'default.log_bogons'},       $conf_defaults{log_bogons});
-  $no_ipv6_comments = coalesce($config{'default.no_ipv6_comments'}, $conf_defaults{no_ipv6_comments});
+
+  # we coalesce with the actual variable first incase it has already
+  # been set (by a command line argument for example)
+  $conf_dir         = coalesce($conf_dir,         $config{'default.conf_dir'},        $conf_defaults{conf_dir});
+  $rules_file       = coalesce($rules_file,       $config{'default.rules_file'},      $conf_defaults{rules_file});
+  $iptables         = coalesce($iptables,         $config{'default.iptables'},        $conf_defaults{iptables});
+  $ip6tables        = coalesce($ip6tables,        $config{'default.ip6tables'},       $conf_defaults{ip6tables});
+  $udc_prefix       = coalesce($udc_prefix,       $config{'default.udc_prefix'},      $conf_defaults{udc_prefix});
+  $do_ipv4          = coalesce($do_ipv6,          $config{'default.ipv4'},            $conf_defaults{ipv4});
+  $do_ipv6          = coalesce($do_ipv4,          $config{'default.ipv6'},            $conf_defaults{ipv6});
+  $ignore_autoconf  = coalesce($ignore_autoconf,  $config{'default.ignore_autoconf'}, $conf_defaults{ignore_autoconf});
+  $old_state_track  = coalesce($old_state_track,  $config{'default.old_state_track'}, $conf_defaults{old_state_track});
+  $log_bogons       = coalesce($log_bogons,       $config{'default.log_bogons'},      $conf_defaults{log_bogons});
+  $output_format    = coalesce($output_format,    $config{'default.output_format'},   $conf_defaults{output_format});
+  $no_ipv6_comments = coalesce($no_ipv6_comments, $config{'default.no_ipv6_comments'},$conf_defaults{no_ipv6_comments});
   chomp($conf_dir);
   chomp($iptables)  if ( $iptables );
   chomp($ip6tables) if ( $ip6tables );
@@ -1562,6 +1694,7 @@ sub read_config_file {
   chomp($ignore_autoconf);
   chomp($old_state_track);
   chomp($log_bogons);
+  chomp($output_format);
   chomp($no_ipv6_comments);
 
   # validate config
@@ -1579,6 +1712,11 @@ sub read_config_file {
     if ( $do_ipv6 ) {
       bomb(sprintf('Could not find ip6tables binary: %s', $ip6tables ? $ip6tables : 'NOT FOUND'))
         unless ( $ip6tables and -x $ip6tables );
+    }
+
+    # valid setting for $output_format?
+    if ( $output_format !~ m/\A(restore|bash)\z/i ) {
+      bomb('Invalid output format: '.$output_format);
     }
   }
 
@@ -1670,9 +1808,10 @@ sub load_interfaces {
 
 sub handle_cmd_args {
   GetOptions(
-    "c|conf=s"  => \$conf_file,
-    "4|ipv4"  => \$do_ipv4,
-    "6|ipv6"  => \$do_ipv6,
+    "c|conf=s"    => \$conf_file,
+    "f|format=s"  => \$output_format,
+    "4|ipv4"      => \$output4,
+    "6|ipv6"      => \$output6,
     "no-ipv6-comments"  => \$no_ipv6_comments,
   ) or usage();
 

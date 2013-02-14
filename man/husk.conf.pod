@@ -101,6 +101,15 @@ instead of creating a log entry everytime a packet from a bogon address is recei
 
 Default: 1
 
+=item C<output_format>
+
+Husk can output your compiled ruleset in multiple formats: 'restore' which is
+suitable for piping to iptables-restore/ip6tables-restore, or 'bash' that will
+generate regular iptables/ip6tables commands. Starting with version 0.9.11,
+'restore' is the default. Prior to this, husk only output 'bash' format.
+
+Default: Prior to version 0.9.11: 'bash', Including and after 0.9.11: 'restore'
+
 =item C<iptables>
 
 The path to iptables binary on your system. Usually C</sbin/iptables> or
