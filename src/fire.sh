@@ -19,6 +19,80 @@
 # by Martin F. Krafft <madduck@madduck.net> and distributed under the
 # Artistic Licence 2.0
 
+function compile_rules {
+  local _command="$1"
+  local _temp_file="$2"
+
+  if $_command &> "$_temp_file" ; then
+    # success, return
+    return 0
+  fi
+
+  # compilation did not succeed, show error and die
+  echo 'Error compiling ruleset:' >&2
+  cat $_temp_file
+  logger -t husk-fire -p user.warning -- 'Error during compilation :('
+  cleanup
+  exit 3
+}
+
+function save_live_rules {
+  local _ipt_save="$1"
+  local _fname="$2"
+
+  if $_ipt_save &> "$_fname" ; then
+    # success
+    return 0
+  fi
+
+  # something went wrong; try and work out why
+  if ! grep -q ipt /proc/modules 2>/dev/null ; then
+    echo "You don't appear to have iptables support in your kernel." >&2
+    cleanup
+    exit 5
+  else
+    echo "Unknown error saving current iptables ruleset." >&2
+    cleanup
+    exit 255
+  fi
+}
+
+function apply_rules {
+  # this function lets us reuse some logic and error checking
+  # for loading both ipv4 and ipv6 rules.
+  local _ipt_restore="$1"
+  local _fname="$2"
+
+  # do a test restore first to see if there are errors
+  local _test_output=$($_ipt_restore --test < $_fname 2>&1)
+
+  # how did we go?
+  if [[ -n "$_test_output" ]] ; then
+    # test restore reevaled an error
+    echo "   ERROR: The following line was not accepted by the kernel" >&2
+    local _failed_line=$(perl -ne '$_ =~ /line:? (\d+)/m; print $1;' <<< $_test_output)
+#    echo "DEBUG: _test_output = $_test_output"
+#    echo "DEBUG: _failed_line = $_failed_line"
+    echo -n '   ' ; sed -n "${_failed_line}p" $_fname >&2
+    cleanup
+    exit 5
+  fi
+
+  # seems the test went ok, so now we can do the actual apply
+  $_ipt_restore < $_fname
+  return $?
+}
+
+function revert_rulesets {
+  local _v4_savefile="$1"
+  local _v6_savefile="$2"
+
+  [[ $IPv4 -eq 1 ]] && iptables-restore   < "$_v4_savefile"
+  [[ $IPv6 -eq 1 ]] && ip6tables-restore  < "$_v6_savefile"
+
+  return 0
+}
+
 function make_suggestions {
   rfile='/etc/husk/rules.conf'
   [[ -f $rfile ]] || { echo "$rfile not found" ; return 1; }
@@ -51,31 +125,43 @@ function make_suggestions {
   fi
 }
 
+function cleanup() {
+  rm -f "$IPv4_FILE" "$IPv6_FILE" || true
+  rm -f "$S4FILE" "$S6FILE" || true
+}
+trap cleanup INT TERM EXIT
+
+
+###############################################################################
+### Start of actual execution code
+###############################################################################
+
+set -u
+set -e
+
+TIMEOUT=10
+IP4_CHECK="/proc/$$/net/ip_tables_names"
+IP6_CHECK="/proc/$$/net/ip6_tables_names"
+skip_confirm=0
+
 if [ $EUID -ne 0 ] ; then
   echo "You are using a non-privileged account"
   exit 1
 fi
 
-TIMEOUT=10
-IP4_CHECK="/proc/$$/net/ip_tables_names"
-IP6_CHECK="/proc/$$/net/ip6_tables_names"
-
-skip_confirm=0
-
-function cleanup() {
-  rm -f "$TFILE"
-  rm -f "$SFILE"
-  exit
-}
-trap cleanup INT TERM EXIT
+# we need some temp files
+IPv4_FILE=$(mktemp -t husk-firev4.XXX)
+IPv6_FILE=$(mktemp -t husk-firev6.XXX)
+S4FILE=$(mktemp -t husk-fire-savev4.XXX)
+S6FILE=$(mktemp -t husk-fire-savev6.XXX)
 
 # Check we've got all our dependencies
 export PATH='/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin'
-for ebin in iptables-save iptables-restore husk mktemp cat grep logger printf ; do
+for ebin in iptables-save iptables-restore husk mktemp cat grep logger printf sed ; do
   [[ -z "$(which $ebin 2>/dev/null)" ]] && { echo "Could not locate '$ebin'" >&2; exit 1; }
 done
 
-### did the user ask for a helper?
+### process command line options
 while getopts "fs" opt; do
   case $opt in
   f)
@@ -91,12 +177,6 @@ while getopts "fs" opt; do
     ;;
   esac
 done
-# get remaining command line args
-args=("$@")
-
-# we need some temp files
-TFILE=$(mktemp -t husk-fire.XXX)
-SFILE=$(mktemp -t husk-fire-save.XXX)
 
 # What do we have support for?
 IPv4=0
@@ -104,46 +184,44 @@ IPv6=0
 [[ -e $IP4_CHECK ]] && { IPv4=1; logger -t husk-fire -p user.debug -- 'IPv4 (iptables) support appears to be present'; }
 [[ -e $IP6_CHECK ]] && { IPv6=1; logger -t husk-fire -p user.debug -- 'IPv6 (ip6tables) support appears to be present'; }
 
-# Compile ruleset to a temporary file
-echo 'Compiling rules.... '
-logger -t husk-fire -p user.info -- 'Beginning compilation'
-if "husk" &> "$TFILE" ; then
-  echo '   DONE'
-  logger -t husk-fire -p user.info -- 'Compilation complete'
-else
-  echo 'Error compiling ruleset:' >&2
-  logger -t husk-fire -p user.warning -- 'Error during compilation :('
-  cat "$TFILE" >&2
-  cleanup
-  exit 3
+# Compile ruleset to a temporary file ready to test loading
+# note that compile_rules() will die if there is an error so
+# there is no need to error check here.
+echo 'Compiling rulesets...'
+if [[ $IPv4 -eq 1 ]] ; then
+  echo '   => IPv4'
+  logger -t husk-fire -p user.info -- 'Compiling IPv4 rules'
+  compile_rules 'husk -4' $IPv4_FILE
+fi
+if [[ $IPv6 -eq 1 ]] ; then
+  echo '   => IPv6'
+  logger -t husk-fire -p user.info -- 'Compiling IPv6 rules'
+  compile_rules 'husk -6' $IPv6_FILE
 fi
 
-# Save current ruleset to a temporary file
-echo "Saving current rules.... "
-if iptables-save > "$SFILE" ; then
-  echo '   DONE'
-else
-  if ! grep -q ipt /proc/modules 2>/dev/null ; then
-    echo "You don't appear to have iptables support in your kernel." >&2
-    cleanup
-    exit 5
-  else
-    echo "Unknown error saving current iptables ruleset." >&2
-    cleanup
-    exit 255
-  fi
+# save the current rules to a temporary file in case we need
+# to restore to a known good state.
+echo 'Saving current rulesets...'
+if [[ $IPv4 -eq 1 ]] ; then
+  echo '   => IPv4'
+  save_live_rules iptables-save  $S4FILE
+fi
+if [[ $IPv6 -eq 1 ]] ; then
+  echo '   => IPv6'
+  save_live_rules ip6tables-save $S6FILE
 fi
 
-# Apply the new rules
-echo "Activating rules...."
-logger -t husk-fire -p user.info -- 'Activating compiled rules'
-activation_output=$(/bin/bash $TFILE 2>&1)
-
-# How did we go?
-if [[ -n "$activation_output" ]] ; then
-  # uhoh, generated some output...
-  echo $activation_output 1>&2
-  logger -s -t husk-fire -p user.warning <<< $activation_output
+# attempt to apply new rules
+echo 'Applying new rulesets...'
+if [[ $IPv4 -eq 1 ]] ; then
+  echo '   => IPv4'
+  logger -t husk-fire -p user.info -- 'Applying compiled IPv4 rules'
+  apply_rules iptables-restore $IPv4_FILE
+fi
+if [[ $IPv6 -eq 1 ]] ; then
+  echo '   => IPv6'
+  logger -t husk-fire -p user.info -- 'Applying compiled IPv6 rules'
+  apply_rules ip6tables-restore $IPv6_FILE
 fi
 
 # Get user confirmation that it's all OK (unless asked not to)
@@ -162,7 +240,7 @@ if [ "$skip_confirm" == '0' ] ; then
         logger -t husk-fire -p user.info -- 'Timeout waiting for user confirmation of rules; ROLL BACK INITIATED'
       fi
       echo "Reverting to saved rules..." >&2
-      iptables-restore < "$SFILE";
+      revert_rulesets $S4FILE $S6FILE
       cleanup
       exit 255
       ;;

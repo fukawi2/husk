@@ -28,6 +28,11 @@ If unsuccessful, restore the previous ruleset from step 2.
 
 =back
 
+IMPORTANT: As of version 0.9.11, husk can generate multiple output formats.
+'fire' will ONLY work with C<restore> output. If you prefer another output
+format, you will need to apply rules manually (or supply a patch to make
+'fire' work with multiple formats ;))
+
 =head1 OPTIONS
 
 =over 4

@@ -50,27 +50,31 @@ are loaded again at next reboot.
 
 =head2 Atomic loading of rules
 
-It has been consciously considered and decided AGAINST atomic loading of rules
-using iptables-restore for several reasons:
-
-=over 4
-
-=item * Compiling to the format required by iptables-restore is more
-complicated than for the regular iptables command.
-
-=item * iptables-restore (currently) does not give much useful information
-about errors if there is a problem with the rules it is loaded. This makes
-debug much more difficult than seeing exactly which rule failed when running
-multiple plain iptables commands.
-
-=item * With atomic reload, a single bad rule will prevent all rules from being
-loaded. With plain iptables commands, only the invalid rule(s) aren't loaded.
-
-=back
+Prior to version 0.9.11, husk has generated output that resulted in non-atomic
+loading of rules (output format 'bash'). This had some advantages, and some
+disadvantages. After 0.9.11, support for atomic loading of rules using
+iptables-restore/ip6tables-restore was added. This is still configurable using
+the output_format option in husk.conf, or the -f/--format flag.
 
 =head1 OPTIONS
 
 =over 4
+
+=item -4
+
+Only output compiled IPv4 rules.
+
+=item -6
+
+Only output compiled IPv6 rules.
+
+=item -f, --format
+
+Change the output format. Valid options are C<restore> (for output suitable to
+pipe to iptables-restore/ip6tables-restore) or C<bash> (for output that can be
+run as a bash script).
+Note that either -4 or -6 B<MUST> be specified if output format is C<restore>
+Default: C<restore>
 
 =item -c, --conf
 
@@ -265,7 +269,11 @@ None. Refer to "Reporting Bugs" ;)
 
 =head1 ACKNOWLEDGEMENTS
 
-Thanks to Mike Sampson for his assistance in adding and testing IPv6 support.
+Thanks to:
+
+Mike Sampson for his assistance in adding and testing IPv6 support.
+
+Matthew Cengia for pushing me to get atomic loading of rules working.
 
 =head1 LICENSE
 
