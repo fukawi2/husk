@@ -32,7 +32,7 @@ my $qr_netfilter_log_line = qr/IN=(\S*) OUT=(\S*) (MAC=(\S*) )?SRC=(\S*) DST=(\S
 if ( -t STDIN ) {
   # no stdin data?
   print "No data found on standard input\n";
-  print "I died!\n";
+  exit 1;
 }
 
 # once we get to here, we have stdin data to read
