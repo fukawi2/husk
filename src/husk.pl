@@ -1664,10 +1664,9 @@ sub read_config_file {
   bomb(sprintf('Configuration file not found: %s', $fname))
     unless ( -f $fname );
 
-  my $cfg = Config::Simple->new;
-  $cfg->read($fname);
   my %config;
-  if ( $cfg ) {
+  my $cfg = Config::Simple->new;
+  if ( $cfg->read($fname) ) {
     %config = $cfg->vars();
   }
 
