@@ -2060,3 +2060,5 @@ sub usage {
 }
 
 __END__
+
+# vim: et:ts=2:sw=2

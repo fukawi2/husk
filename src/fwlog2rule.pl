@@ -68,3 +68,7 @@ foreach ( @stdin ) {
   $rule .= " port $dpt"                 if ( defined($dpt) );
   print $rule."\n";
 }
+
+__END__
+
+# vim: et:ts=2:sw=2
