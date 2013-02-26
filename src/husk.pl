@@ -41,6 +41,7 @@ $conf_defaults{udc_prefix}  = 'tgt_';
 $conf_defaults{ipv4}        = 1;
 $conf_defaults{ipv6}        = 0;
 $conf_defaults{ignore_autoconf} = 0;
+$conf_defaults{log_late_drop}   = 1;
 $conf_defaults{old_state_track} = 0;
 $conf_defaults{no_ipv6_comments}= 0;
 $conf_defaults{log_bogons}    = 1;
@@ -52,6 +53,7 @@ my ($iptables, $ip6tables); # Paths to binaries
 my ($do_ipv4, $do_ipv6);    # Enable/Disable specific IP Versions
 my ($output4, $output6);    # What rules to output
 my $ignore_autoconf;        # Ignore autoconf traffic before antispoof logging?
+my $log_late_drop;          # Include rules to log traffic that reaches chain policy DROP?
 my $old_state_track;        # Use 'state' module instead of 'conntrack'
 my $log_bogons;             # log bogons. if not, drop silently
 my $output_format;          # format to output compiled ruleset
@@ -889,8 +891,10 @@ sub close_rules {
   # happen with packets coming in an interface that has not been
   # defined as a husk zone (ergo has no rules). This traffic will be
   # DROPPED by the chain policy.
-  log_and_drop(chain=>'INPUT',  prefix=>'LATE DROP');
-  log_and_drop(chain=>'FORWARD',  prefix=>'LATE DROP');
+  if ( $log_late_drop ) {
+    log_and_drop(chain=>'INPUT',  prefix=>'LATE DROP');
+    log_and_drop(chain=>'FORWARD',  prefix=>'LATE DROP');
+  }
 
   # Set policies
   foreach my $chain (qw(INPUT FORWARD OUTPUT)) {
@@ -1680,6 +1684,7 @@ sub read_config_file {
   $do_ipv4          = coalesce($do_ipv6,          $config{'default.ipv4'},            $conf_defaults{ipv4});
   $do_ipv6          = coalesce($do_ipv4,          $config{'default.ipv6'},            $conf_defaults{ipv6});
   $ignore_autoconf  = coalesce($ignore_autoconf,  $config{'default.ignore_autoconf'}, $conf_defaults{ignore_autoconf});
+  $log_late_drop    = coalesce($log_late_drop,    $config{'default.log_late_drop'},   $conf_defaults{log_late_drop});
   $old_state_track  = coalesce($old_state_track,  $config{'default.old_state_track'}, $conf_defaults{old_state_track});
   $log_bogons       = coalesce($log_bogons,       $config{'default.log_bogons'},      $conf_defaults{log_bogons});
   $output_format    = coalesce($output_format,    $config{'default.output_format'},   $conf_defaults{output_format});
@@ -1691,6 +1696,7 @@ sub read_config_file {
   chomp($do_ipv4);
   chomp($do_ipv6);
   chomp($ignore_autoconf);
+  chomp($log_late_drop);
   chomp($old_state_track);
   chomp($log_bogons);
   chomp($output_format);

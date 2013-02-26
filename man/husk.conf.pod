@@ -70,6 +70,20 @@ rules. This is a boolean value (1 or 0).
 
 Default: 0
 
+=item C<log_late_drop>
+
+Certain packets will traverse all the way through your ruleset and reach the
+default DROP policy of INPUT or FORWARD. This can occur when the connection
+tracking module in the kernel determines that a connection is closed so the
+packet doesn't get accepted as part of an existing connection, or if you have
+an interface in your system that you haven't given a zone name to (therefore
+there are no rules to handle traffic in that interface). Setting log_late_drop
+to 1 will make sure these packets are logged with the prefix LATE DROP. You may
+find this to be annoying, so you can disable the behavior by setting
+log_late_drop to false. This is a boolean value (1 or 0)
+
+Default: 1
+
 =item C<old_state_track>
 
 By default, husk generated rules using the 'conntrack' module and the 'ctstate'
