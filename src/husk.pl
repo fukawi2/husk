@@ -758,7 +758,7 @@ sub close_rules {
       prefix=>  'NEW_NO_SYN',
       ipv4=>    1,
       ipv6=>    1,
-      criteria=>  '-p tcp ! --syn'
+      criteria=>  '-p tcp ! --tcp-flags ALL SYN'
     );
     ipt(sprintf('-t %s -A %s -j RETURN', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
 
