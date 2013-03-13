@@ -892,8 +892,10 @@ sub close_rules {
   # defined as a husk zone (ergo has no rules). This traffic will be
   # DROPPED by the chain policy.
   if ( $log_late_drop ) {
+    ipt(sprintf('-A INPUT   -p tcp ! --tcp-flags ALL SYN -j DROP'));
     log_and_drop(chain=>'INPUT',  prefix=>'LATE DROP');
-    log_and_drop(chain=>'FORWARD',  prefix=>'LATE DROP');
+    ipt(sprintf('-A FORWARD -p tcp ! --tcp-flags ALL SYN -j DROP'));
+    log_and_drop(chain=>'FORWARD',prefix=>'LATE DROP');
   }
 
   # Set policies
