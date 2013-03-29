@@ -116,7 +116,7 @@ config: $(F_CONF)
 	done
 	# Install (without overwriting) configuration files
 	for f in $(F_CONF) ; do \
-		[[ -e $(DESTDIR)$(D_CNF)/$$f ]] || \
+		[ -e $(DESTDIR)$(D_CNF)/$$f ] || \
 			install -D -m 0644 $$f $(DESTDIR)$(D_CNF)/$$f ; \
 	done
 

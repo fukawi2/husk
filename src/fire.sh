@@ -87,8 +87,8 @@ function revert_rulesets {
   local _v4_savefile="$1"
   local _v6_savefile="$2"
 
-  [[ $IPv4 -eq 1 ]] && iptables-restore   < "$_v4_savefile"
-  [[ $IPv6 -eq 1 ]] && ip6tables-restore  < "$_v6_savefile"
+  [[ $ipv4 -eq 1 ]] && iptables-restore   < "$_v4_savefile"
+  [[ $ipv6 -eq 1 ]] && ip6tables-restore  < "$_v6_savefile"
 
   return 0
 }
@@ -140,8 +140,6 @@ set -u
 set -e
 
 TIMEOUT=10
-IP4_CHECK="/proc/$$/net/ip_tables_names"
-IP6_CHECK="/proc/$$/net/ip6_tables_names"
 skip_confirm=0
 
 if [ $EUID -ne 0 ] ; then
@@ -178,22 +176,27 @@ while getopts "fs" opt; do
   esac
 done
 
-# What do we have support for?
-IPv4=0
-IPv6=0
-[[ -e $IP4_CHECK ]] && { IPv4=1; logger -t husk-fire -p user.debug -- 'IPv4 (iptables) support appears to be present'; }
-[[ -e $IP6_CHECK ]] && { IPv6=1; logger -t husk-fire -p user.debug -- 'IPv6 (ip6tables) support appears to be present'; }
+# which ip versions do we need to process?
+ipv4=0
+ipv6=0
+while read keypair ; do
+  [[ -n $keypair ]] && declare $keypair
+done <<< $(sed -e 's|\s||g' -e '/^#/d' /etc/husk/husk.conf | tr '[A-Z]' '[a-z]')
+if [[ $ipv4 -eq 0 ]] && [[ $ipv6 -eq 0 ]] ; then
+  echo "Need to enable at least 1 of IPv4 or IPv6 in husk.conf"
+  exit 3
+fi
 
 # Compile ruleset to a temporary file ready to test loading
 # note that compile_rules() will die if there is an error so
 # there is no need to error check here.
 echo 'Compiling rulesets...'
-if [[ $IPv4 -eq 1 ]] ; then
+if [[ $ipv4 -eq 1 ]] ; then
   echo '   => IPv4'
   logger -t husk-fire -p user.info -- 'Compiling IPv4 rules'
   compile_rules 'husk -4' $IPv4_FILE
 fi
-if [[ $IPv6 -eq 1 ]] ; then
+if [[ $ipv6 -eq 1 ]] ; then
   echo '   => IPv6'
   logger -t husk-fire -p user.info -- 'Compiling IPv6 rules'
   compile_rules 'husk -6' $IPv6_FILE
@@ -202,23 +205,23 @@ fi
 # save the current rules to a temporary file in case we need
 # to restore to a known good state.
 echo 'Saving current rulesets...'
-if [[ $IPv4 -eq 1 ]] ; then
+if [[ $ipv4 -eq 1 ]] ; then
   echo '   => IPv4'
   save_live_rules iptables-save  $S4FILE
 fi
-if [[ $IPv6 -eq 1 ]] ; then
+if [[ $ipv6 -eq 1 ]] ; then
   echo '   => IPv6'
   save_live_rules ip6tables-save $S6FILE
 fi
 
 # attempt to apply new rules
 echo 'Applying new rulesets...'
-if [[ $IPv4 -eq 1 ]] ; then
+if [[ $ipv4 -eq 1 ]] ; then
   echo '   => IPv4'
   logger -t husk-fire -p user.info -- 'Applying compiled IPv4 rules'
   apply_rules iptables-restore $IPv4_FILE
 fi
-if [[ $IPv6 -eq 1 ]] ; then
+if [[ $ipv6 -eq 1 ]] ; then
   echo '   => IPv6'
   logger -t husk-fire -p user.info -- 'Applying compiled IPv6 rules'
   apply_rules ip6tables-restore $IPv6_FILE
@@ -250,14 +253,14 @@ fi
 # user feedback
 iptables -S &> /dev/null
 if [[ $? -eq 0 ]] ; then
-  if [[ $IPv4 -eq 1 ]] ; then
+  if [[ $ipv4 -eq 1 ]] ; then
     ip4chains=$( ( for T in filter nat mangle raw ; do iptables -t $T -S ; done )  | grep -Pc '^-N' )
     ip4rules=$( ( for T in filter nat mangle raw ;  do iptables -t $T -S ; done )  | grep -Pc '^-A' )
     msg=$(printf 'IPv4: Loaded %u rules in %u chains.\n' $ip4rules $ip4chains)
     echo $msg
     logger -t husk-fire -p user.info -- $msg
   fi
-  if [[ $IPv6 -eq 1 ]] ; then
+  if [[ $ipv6 -eq 1 ]] ; then
     ip6chains=$( ( for T in filter mangle raw ; do ip6tables -t $T -S ; done ) | grep -Pc '^-N' )
     ip6rules=$( ( for T in filter mangle raw ;  do ip6tables -t $T -S ; done ) | grep -Pc '^-A' )
     msg=$(printf 'IPv6: Loaded %u rules in %u chains.\n' $ip6rules $ip6chains)
@@ -282,3 +285,5 @@ else
 fi
 
 exit 0
+
+# vim: et:ts=2:sw=2
