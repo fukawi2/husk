@@ -49,4 +49,4 @@ common bogon NET
 common portscan NET
 common xmas NET
 common syn NET
-common spoof LAN 10.0.0.0/24
+common spoof LAN 10.0.0.0/24  # BCP38 http://tools.ietf.org/html/bcp38

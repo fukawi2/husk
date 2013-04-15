@@ -121,5 +121,5 @@ common nat NET
 common bogon NET
 common xmas NET
 common xmas DMZ
-common spoof LAN 192.168.1.0/24
-common spoof DMZ 192.168.1.0/24
+common spoof LAN 192.168.1.0/24 # BCP38; http://tools.ietf.org/html/bcp38
+common spoof DMZ 192.168.1.0/24 # BCP38; http://tools.ietf.org/html/bcp38
