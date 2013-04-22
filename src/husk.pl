@@ -1081,7 +1081,7 @@ sub log_and_drop {
 
   if ( $ipv4 ) {
     # LOG the packet
-    ipt4(collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
+    ipt4(collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/min --limit-burst 3 -j LOG --log-prefix "[%s] "',
         $table, $chain, $criteria, $log_prefix,
       )));
     # DROP the packet
@@ -1091,7 +1091,7 @@ sub log_and_drop {
   }
   if ( $ipv6 ) {
     # LOG the packet
-    ipt6(collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
+    ipt6(collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/min --limit-burst 3 -j LOG --log-prefix "[%s] "',
         $table, $chain, $criteria, $log_prefix,
       )));
     # DROP the packet
