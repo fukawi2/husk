@@ -44,6 +44,9 @@ install: test bin docs config
 	install -Dm0644 man/husk.html $(DESTDIR)$(D_DOC)/husk.html
 	install -Dm0644 man/fire.html $(DESTDIR)$(D_DOC)/fire.html
 	install -Dm0644 man/husk.conf.html $(DESTDIR)$(D_DOC)/husk.conf.html
+	# ... hook directories
+	install -d -m0755 $(DESTDIR)$(D_CNF)/pre.d
+	install -d -m0755 $(DESTDIR)$(D_CNF)/post.d
 
 clean:
 	rm -f man/*.?.man

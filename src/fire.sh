@@ -125,6 +125,24 @@ function make_suggestions {
   fi
 }
 
+function run-hooks() {
+  local _hook_dir="$1"
+
+  [[ -z "$_hook_dir" ]]   && return
+  [[ ! -d "$_hook_dir" ]] && return
+
+  local _hook
+  for _hook in "$_hook_dir"/* ; do
+    [[ -d "$_hook" ]]    && continue
+    [[ ! -x "$_hook" ]]  && continue
+
+    logger -t husk-fire -p user.info -- "Running hook: $_hook"
+    $_hook > /dev/null
+  done
+
+  return 0
+}
+
 function cleanup() {
   rm -f "$IPv4_FILE" "$IPv6_FILE" || true
   rm -f "$S4FILE" "$S6FILE" || true
@@ -214,6 +232,13 @@ if [[ $ipv6 -eq 1 ]] ; then
   save_live_rules ip6tables-save $S6FILE
 fi
 
+# run pre hooks
+if [[ -d /etc/husk/pre.d ]] ; then
+  echo 'Running pre-hooks...'
+  logger -t husk-fire -p user.info -- 'Running pre-hooks'
+  run-hooks /etc/husk/pre.d
+fi
+
 # attempt to apply new rules
 echo 'Applying new rulesets...'
 if [[ $ipv4 -eq 1 ]] ; then
@@ -225,6 +250,13 @@ if [[ $ipv6 -eq 1 ]] ; then
   echo '   => IPv6'
   logger -t husk-fire -p user.info -- 'Applying compiled IPv6 rules'
   apply_rules ip6tables-restore $IPv6_FILE
+fi
+
+# run post hooks
+if [[ -d /etc/husk/post.d ]] ; then
+  echo 'Running post-hooks...'
+  logger -t husk-fire -p user.info -- 'Running post-hooks'
+  run-hooks /etc/husk/post.d
 fi
 
 # Get user confirmation that it's all OK (unless asked not to)

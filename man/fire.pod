@@ -49,6 +49,14 @@ for how they could be improved.
 
 =back
 
+=head1 HOOKS
+
+Hooks are provided for custom scripts to run both before (pre) and after (post)
+applying new firewall rules. To use hooks, place your scripts in
+C</etc/husk/pre.d/> or C</etc/husk/post.d/> for before and after respectively.
+Make sure your script is executable (C<chmod +x>) otherwise it will be skipped
+(which is actually useful for disabling a hook temporarily).
+
 =head1 BUGS
 
 =head2 Reporting Bugs
