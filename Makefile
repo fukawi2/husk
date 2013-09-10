@@ -18,7 +18,7 @@ F_HELPERS=icmp.conf icmpv6.conf samba.conf apple-ios.conf avg.conf dhcp.conf \
 		  dhcpv6.conf mail.conf dns.conf snmp.conf sql.conf gotomeeting.conf \
 		  pptp.conf nfs.conf
 F_DOCS=README doc/ABOUT doc/LICENSE doc/rules.conf.simple \
-	   doc/rules.conf.standalone doc/rules.conf.example
+	   doc/rules.conf.standalone
 F_MAN=man/*
 
 fb_dir=.fallback-$(shell date +%Y%m%d%H%M%S)
