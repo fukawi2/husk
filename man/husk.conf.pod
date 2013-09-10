@@ -60,6 +60,16 @@ ip6tables).
 
 Default: 0
 
+=item C<ignore_multicast>
+
+If you have multicast traffic triggering anti-spoof protection, this option
+will prevent logging of the traffic and just drop it immediately. Setting
+C<ignore_multicast> to 1 will add rules to the anti-spoof chains to silently
+RETURN packets to multicast addresses before those packets hit the LOG rules.
+This is a boolean value (1 or 0).
+
+Default: 0
+
 =item C<ignore_autoconf>
 
 Sometimes devices like to autoconfigure themselves using RFC3927. Personally I

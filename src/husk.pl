@@ -40,6 +40,7 @@ $conf_defaults{ip6tables}   = `which ip6tables 2>/dev/null`;
 $conf_defaults{udc_prefix}  = 'tgt_';
 $conf_defaults{ipv4}        = 1;
 $conf_defaults{ipv6}        = 0;
+$conf_defaults{ignore_multicast}= 0;
 $conf_defaults{ignore_autoconf} = 0;
 $conf_defaults{log_late_drop}   = 1;
 $conf_defaults{old_state_track} = 0;
@@ -52,6 +53,7 @@ my ($conf_file, $conf_dir, $rules_file, $udc_prefix, $kw);
 my ($iptables, $ip6tables); # Paths to binaries
 my ($do_ipv4, $do_ipv6);    # Enable/Disable specific IP Versions
 my ($output4, $output6);    # What rules to output
+my $ignore_multicast;       # Ignore multicast traffic before antispoof logging?
 my $ignore_autoconf;        # Ignore autoconf traffic before antispoof logging?
 my $log_late_drop;          # Include rules to log traffic that reaches chain policy DROP?
 my $old_state_track;        # Use 'state' module instead of 'conntrack'
@@ -674,6 +676,11 @@ sub close_rules {
         $SPOOF_TABLE,
         $SPOOF_CHAIN,
       ));
+      # RETURN if the packet is destined to a multicast address and $ignore_multicast is true
+      ipt4(sprintf('-t %s -A %s -d 224.0.0.0/4 -m comment --comment "Bypass multicast traffic" -j RETURN',
+        $SPOOF_TABLE,
+        $SPOOF_CHAIN,
+      )) if ( $ignore_multicast );
       # Silently DROP if the packet is from autoconfig addr and ignore_autoconf is true
       ipt4(sprintf('-t %s -A %s -s 169.254.0.0/16 -m comment --comment "prevent autoconfig addr being logged as spoofed" -j DROP',
         $SPOOF_TABLE,
@@ -1685,6 +1692,7 @@ sub read_config_file {
   $udc_prefix       = coalesce($udc_prefix,       $config{'default.udc_prefix'},      $conf_defaults{udc_prefix});
   $do_ipv4          = coalesce($do_ipv6,          $config{'default.ipv4'},            $conf_defaults{ipv4});
   $do_ipv6          = coalesce($do_ipv4,          $config{'default.ipv6'},            $conf_defaults{ipv6});
+  $ignore_multicast = coalesce($ignore_multicast, $config{'default.ignore_multicast'},$conf_defaults{ignore_multicast});
   $ignore_autoconf  = coalesce($ignore_autoconf,  $config{'default.ignore_autoconf'}, $conf_defaults{ignore_autoconf});
   $log_late_drop    = coalesce($log_late_drop,    $config{'default.log_late_drop'},   $conf_defaults{log_late_drop});
   $old_state_track  = coalesce($old_state_track,  $config{'default.old_state_track'}, $conf_defaults{old_state_track});
@@ -1697,6 +1705,7 @@ sub read_config_file {
   chomp($udc_prefix);
   chomp($do_ipv4);
   chomp($do_ipv6);
+  chomp($ignore_multicast);
   chomp($ignore_autoconf);
   chomp($log_late_drop);
   chomp($old_state_track);
