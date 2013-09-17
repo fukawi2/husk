@@ -1480,7 +1480,7 @@ sub compile_interception {
     {$criteria{port_redir} = $1}
 
   # make sure we've understood everything on the line, otherwise BARF!
-  unknown_keyword($rule, $complete_rule) if ( trim($rule) );
+  unknown_keyword(rule=>$rule, complete_rule=>$complete_rule) if ( trim($rule) );
 
   my $ipt_rule = collapse_spaces(sprintf(
     '-t nat -A PREROUTING %s %s %s %s %s -j REDIRECT %s',
