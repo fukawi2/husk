@@ -310,7 +310,16 @@ sub read_rules_file {
       bomb(sprintf('Target "%s" is named the same as a reserved word. This is invalid', $udc_name))
         if ( grep { m/$udc_name/i } @RESERVED_WORDS );
 
-      $curr_chain = new_udc_chain(line=>$line, udc_name=>$udc_name);
+      $curr_chain = sprintf("%s%s", $udc_prefix, $udc_name);
+      if ( ! $udc_list{$curr_chain} ) {
+        # we don't already have a chain with this name; cool!
+        # store the UDC chain name with the line number for later and
+        # create the new chain
+        $udc_list{$curr_chain} = $line_cnt;
+        ipt("-N $curr_chain");
+      } else {
+        bomb(sprintf("'%s' defined twice (second on line %s)", $line, $line_cnt))
+      }
     }
     elsif ( $line =~ m/$qr_tgt_builtins/ ) {
       # call rule - jump to built-in
@@ -514,25 +523,6 @@ sub new_call_chain {
     $chain,
     $line_cnt ? $line_cnt : 'UNKNOWN',
   ));
-
-  # Pass the chain name back
-  return $chain;
-}
-
-sub new_udc_chain {
-  my %args  = @_;
-  my $line  = $args{line};
-  my $udc_name= $args{udc_name};
-  my $chain = sprintf("%s%s", $udc_prefix, $udc_name);
-
-  # Check if we've seen this call before
-  bomb(sprintf("'%s' defined twice (second on line %s)", $line, $line_cnt))
-    if ( $udc_list{$chain} );
-
-  # Store the UDC chain name with the line number for later
-  $udc_list{$chain} = $line_cnt;
-
-  ipt("-N $chain");
 
   # Pass the chain name back
   return $chain;
