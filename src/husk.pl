@@ -759,8 +759,8 @@ sub close_rules {
       table=>   $SYN_PROT_TABLE,
       chain=>   $SYN_PROT_CHAIN,
       prefix=>  'NEW_NO_SYN',
-      ipv4=>    1,
-      ipv6=>    1,
+      ipv4=>    $do_ipv4,
+      ipv6=>    $do_ipv6,
       # only packets we believe to belong to a NEW connection are sent to this
       # chain so we only need to check the TCP flags here and can save the
       # extra processing that 'state' or 'ctstate' modules would create.
@@ -788,16 +788,16 @@ sub close_rules {
       table=>   $XMAS_TABLE,
       chain=>   $XMAS_CHAIN,
       prefix=>  'XMAS_LIGHT',
-      ipv4=>    1,
-      ipv6=>    1,
+      ipv4=>    $do_ipv4,
+      ipv6=>    $do_ipv6,
       criteria=>  '-p tcp --tcp-flags ALL ALL'
     );
     log_and_drop(
       table=>   $XMAS_TABLE,
       chain=>   $XMAS_CHAIN,
       prefix=>  'XMAS_DARK',
-      ipv4=>    1,
-      ipv6=>    1,
+      ipv4=>    $do_ipv4,
+      ipv6=>    $do_ipv6,
       criteria=>  '-p tcp --tcp-flags ALL NONE'
     );
     ipt(sprintf('-t %s -A %s -j RETURN', $XMAS_TABLE, $XMAS_CHAIN));
