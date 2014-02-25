@@ -349,7 +349,8 @@ sub read_rules_file {
       $in_def_variable = 1;
     }
     elsif ( $line =~ m/$qr_tgt_map/ ) {
-      compile_nat($line);
+      # a dnat rule (eg, map in NET protocol tcp port 80 74.132.12.56 to 172.16.1.1)
+      compile_dnat($line);
     }
     elsif ( $line =~ m/$qr_tgt_redirect/ ) {
       # redirect/trap rule
@@ -1336,8 +1337,8 @@ sub compile_call {
   return 1;
 }
 
-sub compile_nat {
-  # Compiles a 'map' rule into an iptables DNAT and SNAT rule.
+sub compile_dnat {
+  # Compiles a 'map' rule into an iptables DNAT rule.
   my($rule) = @_;
   my $complete_rule = $rule;
 
