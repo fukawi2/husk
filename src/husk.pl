@@ -451,11 +451,13 @@ sub read_rules_file {
       if ( defined($udc_list{$udc_chain}) ) {
         # call rule - jump to udc
         compile_call(chain=>$curr_chain, line=>$line);
-      } else {
-        bomb(sprintf(
-          'Unknown command on line %s (perhaps a "define rules" block used before it is defined?):%s %s',
-          $line_cnt, "\n\t", $line));
+        next ParseLines;
       }
+
+      # if we get to here we really have no idea what to do with the line
+      bomb(sprintf(
+        'Unknown command on line %s (perhaps a "define rules" block used before it is defined?):%s %s',
+        $line_cnt, "\n\t", $line));
     }
   }
 
