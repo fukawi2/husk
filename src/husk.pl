@@ -1466,14 +1466,14 @@ sub compile_interception {
     my $ports = lc($3);
     $criteria{dpts} = $ports;
   }
-  if ( $rule =~ s/to ([0-9]+)\b//si )
+  if ( $rule =~ s/to ([0-9]+)(\s|\z)//si )
     {$criteria{port_redir} = $1}
 
   # make sure we've understood everything on the line, otherwise BARF!
   unknown_keyword(rule=>$rule, complete_rule=>$complete_rule) if ( trim($rule) );
 
   my $ipt_rule = collapse_spaces(sprintf(
-    '-t nat -A PREROUTING %s %s %s %s %s -j REDIRECT %s',
+    '-t nat -A PREROUTING %s %s %s %s %s %s %s -j REDIRECT %s',
     $criteria{in}         ? "-i $criteria{in}"                      : '',
     $criteria{proto}      ? "-p $criteria{proto}"                   : '',
     $criteria{inet_ext}   ? "-d $criteria{inet_ext}"                : '',
