@@ -141,7 +141,7 @@ my $qr_kw_mac_addr  = qr/\bmac\s+($qr_mac_address)\b/io;
 my $qr_kw_noop      = qr/\b(all)\b/io;
 my $qr_call_any     = qr/_ANY(_|\b)/o;
 my $qr_call_me      = qr/_ME(_|\b)/o;
-my $qr_variable     = qr/(\$|\%)(\w+)/io; # TODO: Depreciate % usage
+my $qr_variable     = qr/\$(\w+)/io;
 
 # Constants
 my %IPV4_BOGON_SOURCES = (
@@ -369,18 +369,15 @@ sub read_rules_file {
       $raw_rule =~ s/%CHAIN%/$curr_chain/;
       $raw_rule = sprintf('%s -m comment --comment "husk line %s"', $raw_rule, $line_cnt);
 
-      # duplicate the rule and substitute and variables used
-      if ( $raw_rule =~ m/\s$qr_variable\b/ ) {
-        my $var_name = $2;
-        foreach ( @{$user_var{$var_name}} ) {
-          my $var_value = $_;
-          my $recurse_rule = $raw_rule;
-          $recurse_rule =~ s/\s(\$|\%)$var_name\b/ $var_value /;  # TODO: decreciate '%' usage
-          ipt4($recurse_rule);
-        }
-      } else {
-        ipt4($raw_rule);
-      }
+      # See if any variables are used in this rule. If so, call ourself
+      # recursively for each element in the var then abort (we don't want
+      # to complete this iteration of the sub with the un-substituted var
+      # still in the rule string)
+      substitute_var_and_recurse(
+        $raw_rule,
+        \&ipt4,
+        undef
+      ) or ipt4($raw_rule);
     }
     elsif ( $line =~ s/$qr_tgt_ip6tables// ) {
       # raw ip6tables command
@@ -393,18 +390,15 @@ sub read_rules_file {
       $raw_rule =~ s/%CHAIN%/$curr_chain/;
       $raw_rule = sprintf('%s -m comment --comment "husk line %s"', $raw_rule, $line_cnt);
 
-      # duplicate the rule and substitute and variables used
-      if ( $raw_rule =~ m/\s$qr_variable\b/ ) {
-        my $var_name = $2;
-        foreach ( @{$user_var{$var_name}} ) {
-          my $var_value = $_;
-          my $recurse_rule = $raw_rule;
-          $recurse_rule =~ s/\s(\$|\%)$var_name\b/ $var_value /;  # TODO: decreciate '%' usage
-          ipt6($recurse_rule);
-        }
-      } else {
-        ipt6($raw_rule);
-      }
+      # See if any variables are used in this rule. If so, call ourself
+      # recursively for each element in the var then abort (we don't want
+      # to complete this iteration of the sub with the un-substituted var
+      # still in the rule string)
+      substitute_var_and_recurse(
+        $raw_rule,
+        \&ipt6,
+        undef
+      ) or ipt6($raw_rule);
     }
     elsif ( $line =~ m/$qr_tgt_include/ ) {
       # include another rules file
@@ -1128,18 +1122,14 @@ sub compile_call {
   bomb("Invalid input to compile_call()") unless $rule;
 
   # See if any variables are used in this rule. If so, call ourself
-  # recursively for each element in the var
-  if ( $rule =~ m/\s$qr_variable\b/ ) {
-    my $var_name = $2;
-    foreach ( @{$user_var{$var_name}} ) {
-      my $var_value = $_;
-      my $recurse_rule = $rule;
-      $recurse_rule =~ s/\s(\$|\%)$var_name\b/ $var_value /;  # TODO: decreciate '%' usage
-      compile_call(chain=>$chain, line=>$recurse_rule);
-    }
-    # No need to continue from here; Return early.
-    return 1;
-  }
+  # recursively for each element in the var then abort (we don't want
+  # to complete this iteration of the sub with the un-substituted var
+  # still in the rule string)
+  return 1 if substitute_var_and_recurse(
+    $rule,
+    \&compile_call,
+    $chain,
+  );
 
   my %criteria;   # Hash to store all the individual parts of this rule
 
@@ -1889,6 +1879,45 @@ sub include_file {
   $current_rules_file = $orig_fname;
 
   return 1;
+}
+
+sub substitute_var_and_recurse {
+  my ($raw_rule, $recurse_sub, $chain) = @_;
+
+  ### can we find a variable in the rule?
+  if ( $raw_rule =~ m/\s$qr_variable\b/ ) {
+    ### yes
+    my $var_name = $1;
+
+    ### is it a valid variable?
+    if ( ! @{$user_var{$var_name}} ) {
+      bomb("Variable '$var_name' used before it is defined?");
+    }
+
+    ### loop over each element in the array (ie, each value in the variable)
+    ### and call the original sub again
+    foreach ( @{$user_var{$var_name}} ) {
+      my $var_value = $_;
+      my $recurse_rule = $raw_rule;
+      $recurse_rule =~ s/\s\$$var_name\b/ $var_value /;
+
+      # $recurse_sub was passed as a reference to this sub
+      if ( $chain ) {
+        ### if $chain is defined, then we assume we need to pass a hash
+        ### with named arguments to $recurse_sub
+        $recurse_sub->( chain=>$chain, line=>$recurse_rule );
+      } else {
+        ### otherwise we just call $recurse_sub with $recurse_rule as
+        ### the single anonymous argument.
+        $recurse_sub->( $recurse_rule );
+      }
+    }
+    # No need to continue from here; Return early.
+    return 1;
+  }
+
+  ### we didn't find a variable, so return false/undef/null
+  return;
 }
 
 sub unknown_keyword {
