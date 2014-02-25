@@ -879,16 +879,13 @@ sub close_rules {
     ipt($xzone_calls{$me_to_any});
     delete $xzone_calls{$me_to_any};
   }
-  # We want to jump any chains to/from the
-  # special 'ANY' interface before all
-  # other 'call' jumps.
-  foreach my $xzone_rule (sort(keys %xzone_calls)) {
-    if ( $xzone_rule =~ m/$qr_call_any/ ) {
-      ipt($xzone_calls{$xzone_rule});
-      delete $xzone_calls{$xzone_rule};
-    }
+  # We want to jump from FORWARD to any chains to/from the special 'ANY'
+  # interface before all other 'call' jumps.
+  foreach my $xzone_rule ( grep( m/$qr_call_any/, keys %xzone_calls) ) {
+    ipt($xzone_calls{$xzone_rule});
+    delete $xzone_calls{$xzone_rule};
   }
-  # Jump whatever else is left
+  # Jump from FORWARD to whatever else is left
   foreach my $xzone_rule ( sort(keys %xzone_calls )) {
     ipt($xzone_calls{$xzone_rule});
   }
