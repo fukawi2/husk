@@ -363,7 +363,7 @@ sub read_rules_file {
       my $raw_rule = trim($line);
 
       # are we enabled for this ip version?
-      bomb(sprintf("Found an iptables rule but you've told me not to build ipv4 rules?\n\t%s", $line))
+      bomb(sprintf("Found an iptables rule but you've told me not to build IPv4 rules?\n\t%s", $line))
           unless ( $do_ipv4 );
 
       $raw_rule =~ s/%CHAIN%/$curr_chain/;
@@ -384,7 +384,7 @@ sub read_rules_file {
       my $raw_rule = trim($line);
 
       # are we enabled for this ip version?
-      bomb(sprintf("Found an ip6tables rule but you've told me not to build ipv6 rules?\n\t%s", $line))
+      bomb(sprintf("Found an ip6tables rule but you've told me not to build IPv6 rules?\n\t%s", $line))
           unless ( $do_ipv6 );
 
       $raw_rule =~ s/%CHAIN%/$curr_chain/;
