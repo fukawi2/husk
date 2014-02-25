@@ -293,6 +293,7 @@ sub read_rules_file {
       } else {
         $closing_tgt = 'DROP';
       }
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_add_chain/ ) {
       # handle blocks adding to INPUT, OUTPUT and/or FORWARD
@@ -302,6 +303,7 @@ sub read_rules_file {
       my $chain_name = uc($1);
 
       $curr_chain = $chain_name;
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_define_sub/ ) {
       # Start of a user-defined chain (eg, "define SAFE_DNS_SERVERS")
@@ -321,12 +323,14 @@ sub read_rules_file {
       } else {
         bomb(sprintf("'%s' defined twice (second on line %s)", $line, $line_cnt))
       }
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_tgt_builtins/ ) {
       # call rule - jump to built-in (eg, accept, drop, reject etc)
       bomb("Call rule found outside define block on line $line_cnt:\n\t$line")
         unless ( $curr_chain );
       compile_call(chain=>$curr_chain, line=>$line);
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_def_variable/ ) {
       # define a new variable
@@ -349,18 +353,22 @@ sub read_rules_file {
         $var_line = cleanup_line($var_line);
       }
       $in_def_variable = 1;
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_tgt_map/ ) {
       # a dnat rule (eg, map in NET protocol tcp port 80 74.132.12.56 to 172.16.1.1)
       compile_dnat($line);
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_tgt_redirect/ ) {
       # redirect/trap rule
       compile_interception($line);
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_tgt_common/ ) {
       # 'common' rule
       compile_common($line);
+      next ParseLines;
     }
     # note that we use s// on these tests to strip the leading string so
     # the rest of the rule is ready to pass to ipt4() or ipt6()
@@ -384,6 +392,7 @@ sub read_rules_file {
         \&ipt4,
         undef
       ) or ipt4($raw_rule);
+      next ParseLines;
     }
     elsif ( $line =~ s/$qr_tgt_ip6tables// ) {
       # raw ip6tables command
@@ -405,11 +414,13 @@ sub read_rules_file {
         \&ipt6,
         undef
       ) or ipt6($raw_rule);
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_tgt_include/ ) {
       # include another rules file
       my $include_fname = $1;
       include_file($include_fname);
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_end_define/ ) {
       # End of a 'define' block; Clear our state and add default rule
@@ -424,6 +435,8 @@ sub read_rules_file {
       undef($curr_chain);
       undef($in_def_variable);
       $closing_tgt = '';
+
+      next ParseLines;
     }
     else {
       # Ignore if we're inside a variable declaration
