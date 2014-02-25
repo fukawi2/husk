@@ -908,7 +908,7 @@ sub close_rules {
   foreach my $chain (qw(INPUT FORWARD OUTPUT)) {
     ipt(sprintf('-P %s DROP', $chain));
   }
-  return;
+  return 1;
 }
 
 sub print_header {
