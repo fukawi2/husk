@@ -273,13 +273,14 @@ sub read_rules_file {
     $line = cleanup_line($line);
     next ParseLines unless $line;
 
+    # make sure we're not still inside an earlier block
+    if ( $line =~ m/\Adefine\s+/i and $curr_chain ) {
+      bomb(sprintf("Block '%s' started before '%s' ends.", $line, $curr_chain));
+    }
+
     if ( $line =~ m/$qr_define_xzone/ ) {
       # Start of a 'define rules ZONE to ZONE'
       my ($i_name, $o_name) = (uc($1), uc($2));
-
-      # make sure we're not still inside an earlier define rules
-      bomb(sprintf("'%s' starts before '%s' block has ended!", $line, $curr_chain))
-          if ( $curr_chain );
 
       $curr_chain = new_call_chain(line=>$line, in=>$i_name, out=>$o_name);
 
@@ -299,19 +300,11 @@ sub read_rules_file {
       # since the regex ensures we only match if we do.
       my $chain_name = uc($1);
 
-      # make sure we're not still inside an earlier block
-      bomb(sprintf("'%s' starts before '%s' block has ended!", $line, $curr_chain))
-          if ( $curr_chain );
-
       $curr_chain = $chain_name;
     }
     elsif ( $line =~ m/$qr_define_sub/ ) {
       # Start of a user-defined chain
       my $udc_name = $1;
-
-      # make sure we're not still inside an earlier block
-      bomb(sprintf("'%s' starts before '%s' block has ended!", $line, $curr_chain))
-          if ( $curr_chain );
 
       # make sure the user isn't trying to use a reserved word
       bomb(sprintf('Target "%s" is named the same as a reserved word. This is invalid', $udc_name))
