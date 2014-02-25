@@ -1492,14 +1492,14 @@ sub compile_common {
   # Compiles a 'common' rule into an iptables rule.
   my ($line) = @_;
 
-  my $qr_OPTS     = qr/\b?(.+)?/o;
-  my $qr_CMN_NAT    = qr/\Anat ($qr_int_name)/io; # No \z on here because there's extra processing done in the if block
+  my $qr_OPTS         = qr/\b?(.+)?/o;
+  my $qr_CMN_NAT      = qr/\Anat ($qr_int_name)/io; # No \z on here because there's extra processing done in the if block
   my $qr_CMN_LOOPBACK = qr/\Aloopback\z/io;
-  my $qr_CMN_SYN    = qr/\Asyn\s($qr_int_name)\z/io;
-  my $qr_CMN_SPOOF  = qr/\Aspoof ($qr_int_name)$qr_OPTS\z/io;
-  my $qr_CMN_BOGON  = qr/\Abogon ($qr_int_name)$qr_OPTS\z/io;
+  my $qr_CMN_SYN      = qr/\Asyn\s($qr_int_name)\z/io;
+  my $qr_CMN_SPOOF    = qr/\Aspoof ($qr_int_name)$qr_OPTS\z/io;
+  my $qr_CMN_BOGON    = qr/\Abogon ($qr_int_name)$qr_OPTS\z/io;
   my $qr_CMN_PORTSCAN = qr/\Aportscan ($qr_int_name)\z/io;
-  my $qr_CMN_XMAS   = qr/\Axmas ($qr_int_name)\z/io;
+  my $qr_CMN_XMAS     = qr/\Axmas ($qr_int_name)\z/io;
 
   # strip out the leading 'common' keyword
   $line =~ s/$qr_tgt_common//s;
