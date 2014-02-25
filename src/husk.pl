@@ -278,6 +278,7 @@ sub read_rules_file {
       bomb(sprintf("Block '%s' started before '%s' ends.", $line, $curr_chain));
     }
 
+    # start matching this line against our precompiled regexps
     if ( $line =~ m/$qr_define_xzone/ ) {
       # Start of a 'define rules ZONE to ZONE'
       my ($i_name, $o_name) = (uc($1), uc($2));
@@ -303,7 +304,7 @@ sub read_rules_file {
       $curr_chain = $chain_name;
     }
     elsif ( $line =~ m/$qr_define_sub/ ) {
-      # Start of a user-defined chain
+      # Start of a user-defined chain (eg, "define SAFE_DNS_SERVERS")
       my $udc_name = $1;
 
       # make sure the user isn't trying to use a reserved word
@@ -322,12 +323,13 @@ sub read_rules_file {
       }
     }
     elsif ( $line =~ m/$qr_tgt_builtins/ ) {
-      # call rule - jump to built-in
+      # call rule - jump to built-in (eg, accept, drop, reject etc)
       bomb("Call rule found outside define block on line $line_cnt:\n\t$line")
         unless ( $curr_chain );
       compile_call(chain=>$curr_chain, line=>$line);
     }
     elsif ( $line =~ m/$qr_def_variable/ ) {
+      # define a new variable
       my $var_name = $2;
       bomb("Variable already defined: $var_name")
         if ( $user_var{$var_name} );
@@ -360,7 +362,7 @@ sub read_rules_file {
       # 'common' rule
       compile_common($line);
     }
-    # note that we use s// on these comparisons to strip the leading string so
+    # note that we use s// on these tests to strip the leading string so
     # the rest of the rule is ready to pass to ipt4() or ipt6()
     elsif ( $line =~ s/$qr_tgt_iptables// ) {
       # raw iptables command
@@ -481,7 +483,7 @@ sub new_call_chain {
   # Set defaults
   $criteria{chain}  = 'FORWARD';
   # We ternary test this assignment because sometimes there won't be a
-  # corresponding value in %interface (eg, for ANY)
+  # corresponding value in %interface (ie, for ANY)
   $criteria{in}   = $interface{$i_name} ? sprintf('-i %s', $interface{$i_name}) : '';
   $criteria{out}  = $interface{$o_name} ? sprintf('-o %s', $interface{$o_name}) : '';
 
@@ -744,6 +746,9 @@ sub close_rules {
       prefix=>  'NEW_NO_SYN',
       ipv4=>    1,
       ipv6=>    1,
+      # only packets we believe to belong to a NEW connection are sent to this
+      # chain so we only need to check the TCP flags here and can save the
+      # extra processing that 'state' or 'ctstate' modules would create.
       criteria=>  '-p tcp ! --tcp-flags ALL SYN'
     );
     ipt(sprintf('-t %s -A %s -j RETURN', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
@@ -878,9 +883,12 @@ sub close_rules {
   # defined as a husk zone (ergo has no rules). This traffic will be
   # DROPPED by the chain policy.
   if ( $log_late_drop ) {
+    # first, drop any TCP packets without SYN because they create
+    # a buttload of noise in the logs
     ipt(sprintf('-A INPUT   -p tcp ! --tcp-flags ALL SYN -j DROP'));
-    log_and_drop(chain=>'INPUT',  prefix=>'LATE DROP');
     ipt(sprintf('-A FORWARD -p tcp ! --tcp-flags ALL SYN -j DROP'));
+    # new we can log/drop
+    log_and_drop(chain=>'INPUT',  prefix=>'LATE DROP');
     log_and_drop(chain=>'FORWARD',prefix=>'LATE DROP');
   }
 
