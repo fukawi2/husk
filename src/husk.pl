@@ -337,20 +337,19 @@ sub read_rules_file {
       my $var_name = $2;
       bomb("Variable already defined: $var_name")
         if ( $user_var{$var_name} );
-
-      my $var_line = '';
       # Loop through all the next lines until we find 'end define'
       VariableLines:
-      until ( $var_line =~ m/$qr_end_define/ ) {
-        if ( $var_line ) {
-          push(@{$user_var{$var_name}}, $var_line);
-        }
+      for ( my $v = $line_cnt; 1; $v++ ) {
+        my $val = $lines[$v];
+        chomp($val);
 
-        # get the next line and prepare it
-        $line_cnt++;
-        $var_line = $lines[$line_cnt];
-        chomp($var_line);
-        $var_line = cleanup_line($var_line);
+        $val = cleanup_line($val);
+
+        next VariableLines unless $val;
+
+        last VariableLines if ( $val =~ m/$qr_end_define/ );
+
+        push(@{$user_var{$var_name}}, $val);
       }
       $in_def_variable = 1;
       next ParseLines;
