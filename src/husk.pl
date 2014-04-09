@@ -155,7 +155,7 @@ my %IPV4_BOGON_SOURCES = (
   '192.0.2.0/24'    => 'TEST-NET - IANA (RFC-1166)',
   '198.51.100.0/24' => 'TEST-NET-2 - IANA',
   '203.0.113.0/24'  => 'TEST-NET-3 - APNIC (RFC-5737)',
-  '192.0.0.0/24'    => 'IETF Protocol Assignment (RFC-5736)',
+  '192.0.0.0/29'    => 'IETF Protocol Assignment (RFC-5736)',
   '198.18.0.0/15'   => 'Benchmark Testing (RFC-2544)',
   '240.0.0.0/4'     => 'Class E Reserved (RFC-1112)',
 );
