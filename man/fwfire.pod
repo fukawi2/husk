@@ -1,16 +1,16 @@
 =head1 NAME
 
-fire - wrapper to assist applying husk compiled rules
+fwfire - wrapper to assist applying husk compiled rules
 
 =head1 SYNOPSIS
 
-fire [OPTIONS]
+fwfire [OPTIONS]
 
-'fire' is the recommended method to compile and apply a husk ruleset.
+'fwfire' is the recommended method to compile and apply a husk ruleset.
 
 =head1 DESCRIPTION
 
-'fire' will manage several things automatically:
+'fwfire' will manage several things automatically:
 
 =over 4
 
@@ -29,9 +29,9 @@ If unsuccessful, restore the previous ruleset from step 2.
 =back
 
 IMPORTANT: As of version 0.9.11, husk can generate multiple output formats.
-'fire' will ONLY work with C<restore> output. If you prefer another output
+'fwfire' will ONLY work with C<restore> output. If you prefer another output
 format, you will need to apply rules manually (or supply a patch to make
-'fire' work with multiple formats ;))
+'fwfire' work with multiple formats ;))
 
 =head1 OPTIONS
 
