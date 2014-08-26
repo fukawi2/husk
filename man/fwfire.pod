@@ -1,16 +1,16 @@
 =head1 NAME
 
-fire - wrapper to assist applying husk compiled rules
+fwfire - wrapper to assist applying husk compiled rules
 
 =head1 SYNOPSIS
 
-fire [OPTIONS]
+fwfire [OPTIONS]
 
-'fire' is the recommended method to compile and apply a husk ruleset.
+'fwfire' is the recommended method to compile and apply a husk ruleset.
 
 =head1 DESCRIPTION
 
-'fire' will manage several things automatically:
+'fwfire' will manage several things automatically:
 
 =over 4
 
@@ -29,9 +29,9 @@ If unsuccessful, restore the previous ruleset from step 2.
 =back
 
 IMPORTANT: As of version 0.9.11, husk can generate multiple output formats.
-'fire' will ONLY work with C<restore> output. If you prefer another output
+'fwfire' will ONLY work with C<restore> output. If you prefer another output
 format, you will need to apply rules manually (or supply a patch to make
-'fire' work with multiple formats ;))
+'fwfire' work with multiple formats ;))
 
 =head1 OPTIONS
 
@@ -48,6 +48,14 @@ Perform a basic examination of the current rules and make some suggestions
 for how they could be improved.
 
 =back
+
+=head1 HOOKS
+
+Hooks are provided for custom scripts to run both before (pre) and after (post)
+applying new firewall rules. To use hooks, place your scripts in
+C</etc/husk/pre.d/> or C</etc/husk/post.d/> for before and after respectively.
+Make sure your script is executable (C<chmod +x>) otherwise it will be skipped
+(which is actually useful for disabling a hook temporarily).
 
 =head1 BUGS
 
@@ -67,7 +75,7 @@ Licence 2.0
 
 =head1 LICENSE
 
-Copyright 2010-2013 Phillip Smith
+Copyright 2010-2014 Phillip Smith
 
 Made available under the conditions of the GPLv2. This is free software; refer
 to the F<LICENSE> file for details.

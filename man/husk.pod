@@ -26,9 +26,9 @@ Linux device names (eg, eth0, ppp0, bond0 etc) into much more intuitive names
 such as NET, LAN and DMZ. This has the added benefit of moving interfaces in
 the future can be done simply by changing the name-to-device mapping.
 
-=head2 fire script
+=head2 fwfire script
 
-It is suggested to use the supplied "fire" script when loading your rules. This
+It is suggested to use the supplied "fwfire" script when loading your rules. This
 script provides several functions:
 
 =over 4
@@ -100,9 +100,9 @@ L<husk.conf> for full description of configuration file.
 
 	husk | sh
 
-Using the associated "fire" script:
+Using the associated "fwfire" script:
 
-	fire
+	fwfire
 
 =head1 HELPERS
 
@@ -277,7 +277,7 @@ Matthew Cengia for pushing me to get atomic loading of rules working.
 
 =head1 LICENSE
 
-Copyright 2010-2013 Phillip Smith
+Copyright 2010-2014 Phillip Smith
 
 Made available under the conditions of the GPLv2. This is free software; refer
 to the F<LICENSE> file for details.

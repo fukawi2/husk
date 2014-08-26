@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (C) 2010-2013 Phillip Smith
+# Copyright (C) 2010-2014 Phillip Smith
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ function compile_rules {
   # compilation did not succeed, show error and die
   echo 'Error compiling ruleset:' >&2
   cat $_temp_file
-  logger -t husk-fire -p user.warning -- 'Error during compilation :('
+  logger -t fwfire -p user.warning -- 'Error during compilation :('
   cleanup
   exit 3
 }
@@ -125,6 +125,24 @@ function make_suggestions {
   fi
 }
 
+function run-hooks() {
+  local _hook_dir="$1"
+
+  [[ -z "$_hook_dir" ]]   && return
+  [[ ! -d "$_hook_dir" ]] && return
+
+  local _hook
+  for _hook in "$_hook_dir"/* ; do
+    [[ -d "$_hook" ]]    && continue
+    [[ ! -x "$_hook" ]]  && continue
+
+    logger -t fwfire -p user.info -- "Running hook: $_hook"
+    $_hook > /dev/null
+  done
+
+  return 0
+}
+
 function cleanup() {
   rm -f "$IPv4_FILE" "$IPv6_FILE" || true
   rm -f "$S4FILE" "$S6FILE" || true
@@ -148,10 +166,10 @@ if [ $EUID -ne 0 ] ; then
 fi
 
 # we need some temp files
-IPv4_FILE=$(mktemp -t husk-firev4.XXX)
-IPv6_FILE=$(mktemp -t husk-firev6.XXX)
-S4FILE=$(mktemp -t husk-fire-savev4.XXX)
-S6FILE=$(mktemp -t husk-fire-savev6.XXX)
+IPv4_FILE=$(mktemp -t fwfirev4.XXX)
+IPv6_FILE=$(mktemp -t fwfirev6.XXX)
+S4FILE=$(mktemp -t fwfire-savev4.XXX)
+S6FILE=$(mktemp -t fwfire-savev6.XXX)
 
 # Check we've got all our dependencies
 export PATH='/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin'
@@ -193,12 +211,12 @@ fi
 echo 'Compiling rulesets...'
 if [[ $ipv4 -eq 1 ]] ; then
   echo '   => IPv4'
-  logger -t husk-fire -p user.info -- 'Compiling IPv4 rules'
+  logger -t fwfire -p user.info -- 'Compiling IPv4 rules'
   compile_rules 'husk -4' $IPv4_FILE
 fi
 if [[ $ipv6 -eq 1 ]] ; then
   echo '   => IPv6'
-  logger -t husk-fire -p user.info -- 'Compiling IPv6 rules'
+  logger -t fwfire -p user.info -- 'Compiling IPv6 rules'
   compile_rules 'husk -6' $IPv6_FILE
 fi
 
@@ -214,17 +232,31 @@ if [[ $ipv6 -eq 1 ]] ; then
   save_live_rules ip6tables-save $S6FILE
 fi
 
+# run pre hooks
+if [[ -d /etc/husk/pre.d ]] ; then
+  echo 'Running pre-hooks...'
+  logger -t fwfire -p user.info -- 'Running pre-hooks'
+  run-hooks /etc/husk/pre.d
+fi
+
 # attempt to apply new rules
 echo 'Applying new rulesets...'
 if [[ $ipv4 -eq 1 ]] ; then
   echo '   => IPv4'
-  logger -t husk-fire -p user.info -- 'Applying compiled IPv4 rules'
+  logger -t fwfire -p user.info -- 'Applying compiled IPv4 rules'
   apply_rules iptables-restore $IPv4_FILE
 fi
 if [[ $ipv6 -eq 1 ]] ; then
   echo '   => IPv6'
-  logger -t husk-fire -p user.info -- 'Applying compiled IPv6 rules'
+  logger -t fwfire -p user.info -- 'Applying compiled IPv6 rules'
   apply_rules ip6tables-restore $IPv6_FILE
+fi
+
+# run post hooks
+if [[ -d /etc/husk/post.d ]] ; then
+  echo 'Running post-hooks...'
+  logger -t fwfire -p user.info -- 'Running post-hooks'
+  run-hooks /etc/husk/post.d
 fi
 
 # Get user confirmation that it's all OK (unless asked not to)
@@ -235,12 +267,12 @@ if [ "$skip_confirm" == '0' ] ; then
   case "${ret:-}" in
     y*|Y*)
       echo "Thank-you, come again!"
-      logger -t husk-fire -p user.info -- 'New firewall rules loaded!'
+      logger -t fwfire -p user.info -- 'New firewall rules loaded!'
       ;;
     *)
       if [[ -z "${ret}" ]]; then
         echo "Uh-oh... Timeout waiting for reply!" >&2
-        logger -t husk-fire -p user.info -- 'Timeout waiting for user confirmation of rules; ROLL BACK INITIATED'
+        logger -t fwfire -p user.info -- 'Timeout waiting for user confirmation of rules; ROLL BACK INITIATED'
       fi
       echo "Reverting to saved rules..." >&2
       revert_rulesets $S4FILE $S6FILE
@@ -258,14 +290,14 @@ if [[ $? -eq 0 ]] ; then
     ip4rules=$( ( for T in filter nat mangle raw ;  do iptables -t $T -S ; done )  | grep -Pc '^-A' )
     msg=$(printf 'IPv4: Loaded %u rules in %u chains.\n' $ip4rules $ip4chains)
     echo $msg
-    logger -t husk-fire -p user.info -- $msg
+    logger -t fwfire -p user.info -- $msg
   fi
   if [[ $ipv6 -eq 1 ]] ; then
     ip6chains=$( ( for T in filter mangle raw ; do ip6tables -t $T -S ; done ) | grep -Pc '^-N' )
     ip6rules=$( ( for T in filter mangle raw ;  do ip6tables -t $T -S ; done ) | grep -Pc '^-A' )
     msg=$(printf 'IPv6: Loaded %u rules in %u chains.\n' $ip6rules $ip6chains)
     echo $msg
-    logger -t husk-fire -p user.info -- $msg
+    logger -t fwfire -p user.info -- $msg
   fi
 fi
 

@@ -18,7 +18,7 @@ F_HELPERS=icmp.conf icmpv6.conf samba.conf apple-ios.conf avg.conf dhcp.conf \
 		  dhcpv6.conf mail.conf dns.conf snmp.conf sql.conf gotomeeting.conf \
 		  pptp.conf nfs.conf
 F_DOCS=README doc/ABOUT doc/LICENSE doc/rules.conf.simple \
-	   doc/rules.conf.standalone doc/rules.conf.example
+	   doc/rules.conf.standalone
 F_MAN=man/*
 
 fb_dir=.fallback-$(shell date +%Y%m%d%H%M%S)
@@ -30,7 +30,7 @@ all: install
 install: test bin docs config
 	# install the actual scripts
 	install -D -m 0755 src/$(PROJECT).pl	$(DESTDIR)$(D_BIN)/$(PROJECT)
-	install -D -m 0755 src/fire.sh				$(DESTDIR)$(D_BIN)/fire
+	install -D -m 0755 src/fwfire.sh			$(DESTDIR)$(D_BIN)/fwfire
 	install -D -m 0755 src/fwlog2rule.pl	$(DESTDIR)$(D_BIN)/fwlog2rule
 	# install documentation
 	for f in $(F_DOCS) ; do \
@@ -38,12 +38,15 @@ install: test bin docs config
 	done
 	# ...man pages
 	install -Dm0644 man/husk.1.man $(DESTDIR)$(D_MAN)/man1/husk.1p
-	install -Dm0644 man/fire.1.man $(DESTDIR)$(D_MAN)/man1/fire.1p
+	install -Dm0644 man/fwfire.1.man $(DESTDIR)$(D_MAN)/man1/fwfire.1p
 	install -Dm0644 man/husk.conf.5.man $(DESTDIR)$(D_MAN)/man5/husk.conf.5p
 	# ...html docs
 	install -Dm0644 man/husk.html $(DESTDIR)$(D_DOC)/husk.html
-	install -Dm0644 man/fire.html $(DESTDIR)$(D_DOC)/fire.html
+	install -Dm0644 man/fwfire.html $(DESTDIR)$(D_DOC)/fwfire.html
 	install -Dm0644 man/husk.conf.html $(DESTDIR)$(D_DOC)/husk.conf.html
+	# ... hook directories
+	install -d -m0755 $(DESTDIR)$(D_CNF)/pre.d
+	install -d -m0755 $(DESTDIR)$(D_CNF)/post.d
 
 clean:
 	rm -f man/*.?.man
@@ -52,7 +55,7 @@ clean:
 fallback:
 	mkdir $(fb_dir)
 	cp $(DESTDIR)$(D_BIN)/$(PROJECT) $(fb_dir)/
-	cp $(DESTDIR)$(D_BIN)/fire $(fb_dir)/
+	cp $(DESTDIR)$(D_BIN)/fwfire $(fb_dir)/
 	cp $(DESTDIR)$(D_BIN)/fwlog2rule.pl $(fb_dir)/
 	for f in $(F_DOCS) ; do \
 		cp $(DESTDIR)$(D_DOC)/$$f $(fb_dir)/ || exit 1 ; \
@@ -61,7 +64,7 @@ fallback:
 	# The next commands could fail if the user hasn't actually created these files
 	# so stderr is redirected to /dev/null
 	cp $(DESTDIR)$(D_MAN)/man1/husk.1p $(fb_dir)/ 2> /dev/null || true
-	cp $(DESTDIR)$(D_MAN)/man1/fire.1p $(fb_dir)/ 2> /dev/null || true
+	cp $(DESTDIR)$(D_MAN)/man1/fwfire.1p $(fb_dir)/ 2> /dev/null || true
 	cp $(DESTDIR)$(D_MAN)/man5/husk.conf.5p $(fb_dir)/ 2> /dev/null || true
 	cp $(DESTDIR)$(D_CONF)/rules.conf $(fb_dir)/ 2> /dev/null || true
 	for f in $(F_CNF) ; do \
@@ -89,22 +92,22 @@ test:
 	@echo "==> Checking for valid script syntax"
 	@perl -c src/husk.pl
 	@perl -c src/fwlog2rule.pl
-	@bash -n src/fire.sh
+	@bash -n src/fwfire.sh
 
 	@echo "==> It all looks good Captain!"
 
-bin: test src/$(PROJECT).pl src/fire.sh src/fwlog2rule.pl
+bin: test src/$(PROJECT).pl src/fwfire.sh src/fwlog2rule.pl
 
 docs: $(F_DOCS) $(F_MAN)
 	# build man pages
 	pod2man --name=husk man/husk.pod man/husk.1.man
-	pod2man --name=fire man/fire.pod man/fire.1.man
+	pod2man --name=fwfire man/fwfire.pod man/fwfire.1.man
 	pod2man --name=fwlog2rule man/fwlog2rule.pod man/fwlog2rule.1.man
 	pod2man --name=husk.conf man/husk.conf.pod man/husk.conf.5.man
 
 	# build html pages
 	pod2html --infile=man/husk.pod > man/husk.html
-	pod2html --infile=man/fire.pod > man/fire.html
+	pod2html --infile=man/fwfire.pod > man/fwfire.html
 	pod2html --infile=man/fwlog2rule.pod > man/fwlog2rule.html
 	pod2html --infile=man/husk.conf.pod > man/husk.conf.html
 	rm -f pod2htm*.tmp
@@ -122,10 +125,10 @@ config: $(F_CONF)
 
 uninstall:
 	rm -f $(DESTDIR)$(D_MAN)/man1/husk.1p
-	rm -f $(DESTDIR)$(D_MAN)/man1/fire.1p
+	rm -f $(DESTDIR)$(D_MAN)/man1/fwfire.1p
 	rm -f $(DESTDIR)$(D_MAN)/man5/husk.conf.5p
 	rm -f $(DESTDIR)$(D_BIN)/$(PROJECT)
-	rm -f $(DESTDIR)$(D_BIN)/fire
+	rm -f $(DESTDIR)$(D_BIN)/fwfire
 	rm -f $(DESTDIR)$(D_BIN)/fwlog2rule
 	rm -f $(DESTDIR)$(D_DOC)/*
 	rmdir $(DESTDIR)$(D_DOC)/

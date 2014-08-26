@@ -1,7 +1,7 @@
-include helpers/icmp.conf
-include helpers/icmpv6.conf
-include helpers/gotomeeting.conf
-include helpers/samba.conf
+include helpers/icmp.conf         # creates chain called ICMP
+include helpers/icmpv6.conf       # creates chain called ICMP6
+include helpers/gotomeeting.conf  # creates chain called GOTOMEETING
+include helpers/samba.conf        # multiple; SAMBA, ACTIVE_DIRECTORY + more
 
 define rules LAN to NET
 GOTOMEETING source address 192.168.100.100
@@ -49,4 +49,4 @@ common bogon NET
 common portscan NET
 common xmas NET
 common syn NET
-common spoof LAN 10.0.0.0/24
+common spoof LAN 10.0.0.0/24  # BCP38 http://tools.ietf.org/html/bcp38

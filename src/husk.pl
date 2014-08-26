@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright (C) 2010-2013 Phillip Smith
+# Copyright (C) 2010-2014 Phillip Smith
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -40,6 +40,7 @@ $conf_defaults{ip6tables}   = `which ip6tables 2>/dev/null`;
 $conf_defaults{udc_prefix}  = 'tgt_';
 $conf_defaults{ipv4}        = 1;
 $conf_defaults{ipv6}        = 0;
+$conf_defaults{ignore_multicast}= 0;
 $conf_defaults{ignore_autoconf} = 0;
 $conf_defaults{log_late_drop}   = 1;
 $conf_defaults{old_state_track} = 0;
@@ -52,6 +53,7 @@ my ($conf_file, $conf_dir, $rules_file, $udc_prefix, $kw);
 my ($iptables, $ip6tables); # Paths to binaries
 my ($do_ipv4, $do_ipv6);    # Enable/Disable specific IP Versions
 my ($output4, $output6);    # What rules to output
+my $ignore_multicast;       # Ignore multicast traffic before antispoof logging?
 my $ignore_autoconf;        # Ignore autoconf traffic before antispoof logging?
 my $log_late_drop;          # Include rules to log traffic that reaches chain policy DROP?
 my $old_state_track;        # Use 'state' module instead of 'conntrack'
@@ -139,7 +141,7 @@ my $qr_kw_mac_addr  = qr/\bmac\s+($qr_mac_address)\b/io;
 my $qr_kw_noop      = qr/\b(all)\b/io;
 my $qr_call_any     = qr/_ANY(_|\b)/o;
 my $qr_call_me      = qr/_ME(_|\b)/o;
-my $qr_variable     = qr/(\$|\%)(\w+)/io; # TODO: Depreciate % usage
+my $qr_variable     = qr/\$(\w+)/io;
 
 # Constants
 my %IPV4_BOGON_SOURCES = (
@@ -153,7 +155,7 @@ my %IPV4_BOGON_SOURCES = (
   '192.0.2.0/24'    => 'TEST-NET - IANA (RFC-1166)',
   '198.51.100.0/24' => 'TEST-NET-2 - IANA',
   '203.0.113.0/24'  => 'TEST-NET-3 - APNIC (RFC-5737)',
-  '192.0.0.0/24'    => 'IETF Protocol Assignment (RFC-5736)',
+  '192.0.0.0/29'    => 'IETF Protocol Assignment (RFC-5736)',
   '198.18.0.0/15'   => 'Benchmark Testing (RFC-2544)',
   '240.0.0.0/4'     => 'Class E Reserved (RFC-1112)',
 );
@@ -271,13 +273,15 @@ sub read_rules_file {
     $line = cleanup_line($line);
     next ParseLines unless $line;
 
+    # make sure we're not still inside an earlier block
+    if ( $line =~ m/\Adefine\s+/i and $curr_chain ) {
+      bomb(sprintf("Block '%s' started before '%s' ends.", $line, $curr_chain));
+    }
+
+    # start matching this line against our precompiled regexps
     if ( $line =~ m/$qr_define_xzone/ ) {
       # Start of a 'define rules ZONE to ZONE'
       my ($i_name, $o_name) = (uc($1), uc($2));
-
-      # make sure we're not still inside an earlier define rules
-      bomb(sprintf("'%s' starts before '%s' block has ended!", $line, $curr_chain))
-          if ( $curr_chain );
 
       $curr_chain = new_call_chain(line=>$line, in=>$i_name, out=>$o_name);
 
@@ -289,6 +293,7 @@ sub read_rules_file {
       } else {
         $closing_tgt = 'DROP';
       }
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_add_chain/ ) {
       # handle blocks adding to INPUT, OUTPUT and/or FORWARD
@@ -297,33 +302,38 @@ sub read_rules_file {
       # since the regex ensures we only match if we do.
       my $chain_name = uc($1);
 
-      # make sure we're not still inside an earlier block
-      bomb(sprintf("'%s' starts before '%s' block has ended!", $line, $curr_chain))
-          if ( $curr_chain );
-
       $curr_chain = $chain_name;
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_define_sub/ ) {
-      # Start of a user-defined chain
+      # Start of a user-defined chain (eg, "define SAFE_DNS_SERVERS")
       my $udc_name = $1;
-
-      # make sure we're not still inside an earlier block
-      bomb(sprintf("'%s' starts before '%s' block has ended!", $line, $curr_chain))
-          if ( $curr_chain );
 
       # make sure the user isn't trying to use a reserved word
       bomb(sprintf('Target "%s" is named the same as a reserved word. This is invalid', $udc_name))
-        if ( grep { $_ =~ /$udc_name/i } @RESERVED_WORDS );
+        if ( grep { m/$udc_name/i } @RESERVED_WORDS );
 
-      $curr_chain = new_udc_chain(line=>$line, udc_name=>$udc_name);
+      $curr_chain = sprintf("%s%s", $udc_prefix, $udc_name);
+      if ( ! $udc_list{$curr_chain} ) {
+        # we don't already have a chain with this name; cool!
+        # store the UDC chain name with the line number for later and
+        # create the new chain
+        $udc_list{$curr_chain} = $line_cnt;
+        ipt("-N $curr_chain");
+      } else {
+        bomb(sprintf("'%s' defined twice (second on line %s)", $line, $line_cnt))
+      }
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_tgt_builtins/ ) {
-      # call rule - jump to built-in
+      # call rule - jump to built-in (eg, accept, drop, reject etc)
       bomb("Call rule found outside define block on line $line_cnt:\n\t$line")
         unless ( $curr_chain );
       compile_call(chain=>$curr_chain, line=>$line);
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_def_variable/ ) {
+      # define a new variable
       my $var_name = $2;
       bomb("Variable already defined: $var_name")
         if ( $user_var{$var_name} );
@@ -342,72 +352,74 @@ sub read_rules_file {
         push(@{$user_var{$var_name}}, $val);
       }
       $in_def_variable = 1;
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_tgt_map/ ) {
-      compile_nat($line);
+      # a dnat rule (eg, map in NET protocol tcp port 80 74.132.12.56 to 172.16.1.1)
+      compile_dnat($line);
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_tgt_redirect/ ) {
       # redirect/trap rule
       compile_interception($line);
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_tgt_common/ ) {
       # 'common' rule
       compile_common($line);
+      next ParseLines;
     }
-    # note that we use s// on these comparisons to strip the leading string so
+    # note that we use s// on these tests to strip the leading string so
     # the rest of the rule is ready to pass to ipt4() or ipt6()
     elsif ( $line =~ s/$qr_tgt_iptables// ) {
       # raw iptables command
       my $raw_rule = trim($line);
 
       # are we enabled for this ip version?
-      bomb(sprintf("Found an iptables rule but you've told me not to build ipv4 rules?\n\t%s", $line))
+      bomb(sprintf("Found an iptables rule but you've told me not to build IPv4 rules?\n\t%s", $line))
           unless ( $do_ipv4 );
 
       $raw_rule =~ s/%CHAIN%/$curr_chain/;
       $raw_rule = sprintf('%s -m comment --comment "husk line %s"', $raw_rule, $line_cnt);
 
-      # duplicate the rule and substitute and variables used
-      if ( $raw_rule =~ m/\s$qr_variable\b/ ) {
-        my $var_name = $2;
-        foreach ( @{$user_var{$var_name}} ) {
-          my $var_value = $_;
-          my $recurse_rule = $raw_rule;
-          $recurse_rule =~ s/\s(\$|\%)$var_name\b/ $var_value /;  # TODO: decreciate '%' usage
-          ipt4($recurse_rule);
-        }
-      } else {
-        ipt4($raw_rule);
-      }
+      # See if any variables are used in this rule. If so, call ourself
+      # recursively for each element in the var then abort (we don't want
+      # to complete this iteration of the sub with the un-substituted var
+      # still in the rule string)
+      substitute_var_and_recurse(
+        $raw_rule,
+        \&ipt4,
+        undef
+      ) or ipt4($raw_rule);
+      next ParseLines;
     }
     elsif ( $line =~ s/$qr_tgt_ip6tables// ) {
       # raw ip6tables command
       my $raw_rule = trim($line);
 
       # are we enabled for this ip version?
-      bomb(sprintf("Found an ip6tables rule but you've told me not to build ipv6 rules?\n\t%s", $line))
+      bomb(sprintf("Found an ip6tables rule but you've told me not to build IPv6 rules?\n\t%s", $line))
           unless ( $do_ipv6 );
 
       $raw_rule =~ s/%CHAIN%/$curr_chain/;
       $raw_rule = sprintf('%s -m comment --comment "husk line %s"', $raw_rule, $line_cnt);
 
-      # duplicate the rule and substitute and variables used
-      if ( $raw_rule =~ m/\s$qr_variable\b/ ) {
-        my $var_name = $2;
-        foreach ( @{$user_var{$var_name}} ) {
-          my $var_value = $_;
-          my $recurse_rule = $raw_rule;
-          $recurse_rule =~ s/\s(\$|\%)$var_name\b/ $var_value /;  # TODO: decreciate '%' usage
-          ipt6($recurse_rule);
-        }
-      } else {
-        ipt6($raw_rule);
-      }
+      # See if any variables are used in this rule. If so, call ourself
+      # recursively for each element in the var then abort (we don't want
+      # to complete this iteration of the sub with the un-substituted var
+      # still in the rule string)
+      substitute_var_and_recurse(
+        $raw_rule,
+        \&ipt6,
+        undef
+      ) or ipt6($raw_rule);
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_tgt_include/ ) {
       # include another rules file
       my $include_fname = $1;
       include_file($include_fname);
+      next ParseLines;
     }
     elsif ( $line =~ m/$qr_end_define/ ) {
       # End of a 'define' block; Clear our state and add default rule
@@ -422,6 +434,8 @@ sub read_rules_file {
       undef($curr_chain);
       undef($in_def_variable);
       $closing_tgt = '';
+
+      next ParseLines;
     }
     else {
       # Ignore if we're inside a variable declaration
@@ -436,11 +450,13 @@ sub read_rules_file {
       if ( defined($udc_list{$udc_chain}) ) {
         # call rule - jump to udc
         compile_call(chain=>$curr_chain, line=>$line);
-      } else {
-        bomb(sprintf(
-          'Unknown command on line %s (perhaps a "define rules" block used before it is defined?):%s %s',
-          $line_cnt, "\n\t", $line));
+        next ParseLines;
       }
+
+      # if we get to here we really have no idea what to do with the line
+      bomb(sprintf(
+        'Unknown command on line %s (perhaps a "define rules" block used before it is defined?):%s %s',
+        $line_cnt, "\n\t", $line));
     }
   }
 
@@ -481,7 +497,7 @@ sub new_call_chain {
   # Set defaults
   $criteria{chain}  = 'FORWARD';
   # We ternary test this assignment because sometimes there won't be a
-  # corresponding value in %interface (eg, for ANY)
+  # corresponding value in %interface (ie, for ANY)
   $criteria{in}   = $interface{$i_name} ? sprintf('-i %s', $interface{$i_name}) : '';
   $criteria{out}  = $interface{$o_name} ? sprintf('-o %s', $interface{$o_name}) : '';
 
@@ -525,25 +541,6 @@ sub new_call_chain {
     $chain,
     $line_cnt ? $line_cnt : 'UNKNOWN',
   ));
-
-  # Pass the chain name back
-  return $chain;
-}
-
-sub new_udc_chain {
-  my %args  = @_;
-  my $line  = $args{line};
-  my $udc_name= $args{udc_name};
-  my $chain = sprintf("%s%s", $udc_prefix, $udc_name);
-
-  # Check if we've seen this call before
-  bomb(sprintf("'%s' defined twice (second on line %s)", $line, $line_cnt))
-    if ( $udc_list{$chain} );
-
-  # Store the UDC chain name with the line number for later
-  $udc_list{$chain} = $line_cnt;
-
-  ipt("-N $chain");
 
   # Pass the chain name back
   return $chain;
@@ -674,6 +671,11 @@ sub close_rules {
         $SPOOF_TABLE,
         $SPOOF_CHAIN,
       ));
+      # RETURN if the packet is destined to a multicast address and $ignore_multicast is true
+      ipt4(sprintf('-t %s -A %s -d 224.0.0.0/4 -m comment --comment "Bypass multicast traffic" -j RETURN',
+        $SPOOF_TABLE,
+        $SPOOF_CHAIN,
+      )) if ( $ignore_multicast );
       # Silently DROP if the packet is from autoconfig addr and ignore_autoconf is true
       ipt4(sprintf('-t %s -A %s -s 169.254.0.0/16 -m comment --comment "prevent autoconfig addr being logged as spoofed" -j DROP',
         $SPOOF_TABLE,
@@ -756,8 +758,11 @@ sub close_rules {
       table=>   $SYN_PROT_TABLE,
       chain=>   $SYN_PROT_CHAIN,
       prefix=>  'NEW_NO_SYN',
-      ipv4=>    1,
-      ipv6=>    1,
+      ipv4=>    $do_ipv4,
+      ipv6=>    $do_ipv6,
+      # only packets we believe to belong to a NEW connection are sent to this
+      # chain so we only need to check the TCP flags here and can save the
+      # extra processing that 'state' or 'ctstate' modules would create.
       criteria=>  '-p tcp ! --tcp-flags ALL SYN'
     );
     ipt(sprintf('-t %s -A %s -j RETURN', $SYN_PROT_TABLE, $SYN_PROT_CHAIN));
@@ -782,16 +787,16 @@ sub close_rules {
       table=>   $XMAS_TABLE,
       chain=>   $XMAS_CHAIN,
       prefix=>  'XMAS_LIGHT',
-      ipv4=>    1,
-      ipv6=>    1,
+      ipv4=>    $do_ipv4,
+      ipv6=>    $do_ipv6,
       criteria=>  '-p tcp --tcp-flags ALL ALL'
     );
     log_and_drop(
       table=>   $XMAS_TABLE,
       chain=>   $XMAS_CHAIN,
       prefix=>  'XMAS_DARK',
-      ipv4=>    1,
-      ipv6=>    1,
+      ipv4=>    $do_ipv4,
+      ipv6=>    $do_ipv6,
       criteria=>  '-p tcp --tcp-flags ALL NONE'
     );
     ipt(sprintf('-t %s -A %s -j RETURN', $XMAS_TABLE, $XMAS_CHAIN));
@@ -873,16 +878,13 @@ sub close_rules {
     ipt($xzone_calls{$me_to_any});
     delete $xzone_calls{$me_to_any};
   }
-  # We want to jump any chains to/from the
-  # special 'ANY' interface before all
-  # other 'call' jumps.
-  foreach my $xzone_rule (sort(keys %xzone_calls)) {
-    if ( $xzone_rule =~ m/$qr_call_any/ ) {
-      ipt($xzone_calls{$xzone_rule});
-      delete $xzone_calls{$xzone_rule};
-    }
+  # We want to jump from FORWARD to any chains to/from the special 'ANY'
+  # interface before all other 'call' jumps.
+  foreach my $xzone_rule ( grep( m/$qr_call_any/, keys %xzone_calls) ) {
+    ipt($xzone_calls{$xzone_rule});
+    delete $xzone_calls{$xzone_rule};
   }
-  # Jump whatever else is left
+  # Jump from FORWARD to whatever else is left
   foreach my $xzone_rule ( sort(keys %xzone_calls )) {
     ipt($xzone_calls{$xzone_rule});
   }
@@ -892,9 +894,12 @@ sub close_rules {
   # defined as a husk zone (ergo has no rules). This traffic will be
   # DROPPED by the chain policy.
   if ( $log_late_drop ) {
+    # first, drop any TCP packets without SYN because they create
+    # a buttload of noise in the logs
     ipt(sprintf('-A INPUT   -p tcp ! --tcp-flags ALL SYN -j DROP'));
-    log_and_drop(chain=>'INPUT',  prefix=>'LATE DROP');
     ipt(sprintf('-A FORWARD -p tcp ! --tcp-flags ALL SYN -j DROP'));
+    # new we can log/drop
+    log_and_drop(chain=>'INPUT',  prefix=>'LATE DROP');
     log_and_drop(chain=>'FORWARD',prefix=>'LATE DROP');
   }
 
@@ -902,13 +907,13 @@ sub close_rules {
   foreach my $chain (qw(INPUT FORWARD OUTPUT)) {
     ipt(sprintf('-P %s DROP', $chain));
   }
-  return;
+  return 1;
 }
 
 sub print_header {
   print "#\n";
   printf("# husk version %s\n", $VERSION);
-  print "# Copyright (C) 2010-2013 Phillip Smith\n";
+  print "# Copyright (C) 2010-2014 Phillip Smith\n";
   print "# This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are\n";
   print "# welcome to use and redistribute it under the conditions of the GPL license version 2\n";
   print "# See the \"COPYING\" file for further details.\n";
@@ -1081,7 +1086,7 @@ sub log_and_drop {
 
   if ( $ipv4 ) {
     # LOG the packet
-    ipt4(collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
+    ipt4(collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/min --limit-burst 3 -j LOG --log-prefix "[%s] "',
         $table, $chain, $criteria, $log_prefix,
       )));
     # DROP the packet
@@ -1091,7 +1096,7 @@ sub log_and_drop {
   }
   if ( $ipv6 ) {
     # LOG the packet
-    ipt6(collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/minute --limit-burst 3 -j LOG --log-prefix="[%s] "',
+    ipt6(collapse_spaces(sprintf('%s -A %s %s -m limit --limit 4/min --limit-burst 3 -j LOG --log-prefix "[%s] "',
         $table, $chain, $criteria, $log_prefix,
       )));
     # DROP the packet
@@ -1121,18 +1126,14 @@ sub compile_call {
   bomb("Invalid input to compile_call()") unless $rule;
 
   # See if any variables are used in this rule. If so, call ourself
-  # recursively for each element in the var
-  if ( $rule =~ m/\s$qr_variable\b/ ) {
-    my $var_name = $2;
-    foreach ( @{$user_var{$var_name}} ) {
-      my $var_value = $_;
-      my $recurse_rule = $rule;
-      $recurse_rule =~ s/\s(\$|\%)$var_name\b/ $var_value /;  # TODO: decreciate '%' usage
-      compile_call(chain=>$chain, line=>$recurse_rule);
-    }
-    # No need to continue from here; Return early.
-    return 1;
-  }
+  # recursively for each element in the var then abort (we don't want
+  # to complete this iteration of the sub with the un-substituted var
+  # still in the rule string)
+  return 1 if substitute_var_and_recurse(
+    $rule,
+    \&compile_call,
+    $chain,
+  );
 
   my %criteria;   # Hash to store all the individual parts of this rule
 
@@ -1355,8 +1356,8 @@ sub compile_call {
   return 1;
 }
 
-sub compile_nat {
-  # Compiles a 'map' rule into an iptables DNAT and SNAT rule.
+sub compile_dnat {
+  # Compiles a 'map' rule into an iptables DNAT rule.
   my($rule) = @_;
   my $complete_rule = $rule;
 
@@ -1469,14 +1470,14 @@ sub compile_interception {
     my $ports = lc($3);
     $criteria{dpts} = $ports;
   }
-  if ( $rule =~ s/to ([0-9]+)\b//si )
+  if ( $rule =~ s/to ([0-9]+)(\s|\z)//si )
     {$criteria{port_redir} = $1}
 
   # make sure we've understood everything on the line, otherwise BARF!
-  unknown_keyword($rule, $complete_rule) if ( trim($rule) );
+  unknown_keyword(rule=>$rule, complete_rule=>$complete_rule) if ( trim($rule) );
 
   my $ipt_rule = collapse_spaces(sprintf(
-    '-t nat -A PREROUTING %s %s %s %s %s -j REDIRECT %s',
+    '-t nat -A PREROUTING %s %s %s %s %s %s %s -j REDIRECT %s',
     $criteria{in}         ? "-i $criteria{in}"                      : '',
     $criteria{proto}      ? "-p $criteria{proto}"                   : '',
     $criteria{inet_ext}   ? "-d $criteria{inet_ext}"                : '',
@@ -1495,14 +1496,14 @@ sub compile_common {
   # Compiles a 'common' rule into an iptables rule.
   my ($line) = @_;
 
-  my $qr_OPTS     = qr/\b?(.+)?/o;
-  my $qr_CMN_NAT    = qr/\Anat ($qr_int_name)/io; # No \z on here because there's extra processing done in the if block
+  my $qr_OPTS         = qr/\b?(.+)?/o;
+  my $qr_CMN_NAT      = qr/\Anat ($qr_int_name)/io; # No \z on here because there's extra processing done in the if block
   my $qr_CMN_LOOPBACK = qr/\Aloopback\z/io;
-  my $qr_CMN_SYN    = qr/\Asyn\s($qr_int_name)\z/io;
-  my $qr_CMN_SPOOF  = qr/\Aspoof ($qr_int_name)$qr_OPTS\z/io;
-  my $qr_CMN_BOGON  = qr/\Abogon ($qr_int_name)$qr_OPTS\z/io;
+  my $qr_CMN_SYN      = qr/\Asyn\s($qr_int_name)\z/io;
+  my $qr_CMN_SPOOF    = qr/\Aspoof ($qr_int_name)$qr_OPTS\z/io;
+  my $qr_CMN_BOGON    = qr/\Abogon ($qr_int_name)$qr_OPTS\z/io;
   my $qr_CMN_PORTSCAN = qr/\Aportscan ($qr_int_name)\z/io;
-  my $qr_CMN_XMAS   = qr/\Axmas ($qr_int_name)\z/io;
+  my $qr_CMN_XMAS     = qr/\Axmas ($qr_int_name)\z/io;
 
   # strip out the leading 'common' keyword
   $line =~ s/$qr_tgt_common//s;
@@ -1685,6 +1686,7 @@ sub read_config_file {
   $udc_prefix       = coalesce($udc_prefix,       $config{'default.udc_prefix'},      $conf_defaults{udc_prefix});
   $do_ipv4          = coalesce($do_ipv6,          $config{'default.ipv4'},            $conf_defaults{ipv4});
   $do_ipv6          = coalesce($do_ipv4,          $config{'default.ipv6'},            $conf_defaults{ipv6});
+  $ignore_multicast = coalesce($ignore_multicast, $config{'default.ignore_multicast'},$conf_defaults{ignore_multicast});
   $ignore_autoconf  = coalesce($ignore_autoconf,  $config{'default.ignore_autoconf'}, $conf_defaults{ignore_autoconf});
   $log_late_drop    = coalesce($log_late_drop,    $config{'default.log_late_drop'},   $conf_defaults{log_late_drop});
   $old_state_track  = coalesce($old_state_track,  $config{'default.old_state_track'}, $conf_defaults{old_state_track});
@@ -1697,6 +1699,7 @@ sub read_config_file {
   chomp($udc_prefix);
   chomp($do_ipv4);
   chomp($do_ipv6);
+  chomp($ignore_multicast);
   chomp($ignore_autoconf);
   chomp($log_late_drop);
   chomp($old_state_track);
@@ -1880,6 +1883,45 @@ sub include_file {
   $current_rules_file = $orig_fname;
 
   return 1;
+}
+
+sub substitute_var_and_recurse {
+  my ($raw_rule, $recurse_sub, $chain) = @_;
+
+  ### can we find a variable in the rule?
+  if ( $raw_rule =~ m/\s$qr_variable\b/ ) {
+    ### yes
+    my $var_name = $1;
+
+    ### is it a valid variable?
+    if ( ! @{$user_var{$var_name}} ) {
+      bomb("Variable '$var_name' used before it is defined?");
+    }
+
+    ### loop over each element in the array (ie, each value in the variable)
+    ### and call the original sub again
+    foreach ( @{$user_var{$var_name}} ) {
+      my $var_value = $_;
+      my $recurse_rule = $raw_rule;
+      $recurse_rule =~ s/\s\$$var_name\b/ $var_value /;
+
+      # $recurse_sub was passed as a reference to this sub
+      if ( $chain ) {
+        ### if $chain is defined, then we assume we need to pass a hash
+        ### with named arguments to $recurse_sub
+        $recurse_sub->( chain=>$chain, line=>$recurse_rule );
+      } else {
+        ### otherwise we just call $recurse_sub with $recurse_rule as
+        ### the single anonymous argument.
+        $recurse_sub->( $recurse_rule );
+      }
+    }
+    # No need to continue from here; Return early.
+    return 1;
+  }
+
+  ### we didn't find a variable, so return false/undef/null
+  return;
 }
 
 sub unknown_keyword {
