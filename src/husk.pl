@@ -26,7 +26,6 @@ use 5.006;  # Need Perl version 5.6 for undefined scalar variable as a
             # http://www.perlcritic.org/pod/Perl/Critic/Policy/InputOutput/ProhibitBarewordFileHandles.html
 #use 5.01;  # Need Perl version 5.10 for Coalesce operator (//)
 use Config::Simple;   # To parse husk.conf
-use Config::IniFiles; # To parse here documents in hostgroups.conf
 use Getopt::Long;
 
 my $VERSION = '%VERSION%';
@@ -67,7 +66,6 @@ my $xzone_prefix = 'x';     # Prefix for Cross-zone chain names
 
 # Arrays and Hashes
 my %interface;    # Interfaces Name to eth Mappings (eg, NET => ppp0)
-my %addr_group;   # Hostgroups from hostgroups.conf
 my @ipv4_rules;   # IPv4 Rules in iptables syntax to be output
 my @ipv6_rules;   # IPv6 Rules in iptables syntax to be output
 my %xzone_calls;  # Hash of cross-zone traffic rulesets (eg, x_LAN_NET)
@@ -117,8 +115,6 @@ my $qr_kw_out_int   = qr/\bout(going)? ($qr_int_name)\b/io;
 # IOW: make sure the IPv6 regex is tested before the hostname regex.
 my $qr_kw_src_addr  = qr/\bsource\s+address\s+($qr_ip4_cidr|$qr_ip6_cidr|$qr_hostname)\b/io;
 my $qr_kw_dst_addr  = qr/\bdest(ination)?\s+address\s+($qr_ip4_cidr|$qr_ip6_cidr|$qr_hostname)\b/io;
-my $qr_kw_src_host  = qr/\bsource\s+group\s+(\S+)\b/io;
-my $qr_kw_dst_host  = qr/\bdest(ination)?\s+group\s+(\S+)\b/io;
 my $qr_kw_src_range = qr/\bsource\s+range\s+($qr_ip4_address|$qr_ip6_address)\s+to\s+($qr_ip4_address|$qr_ip6_address)\b/io;
 my $qr_kw_dst_range = qr/\bdest(ination)?\s+range\s+($qr_ip4_address|$qr_ip6_address)\s+to\s+($qr_ip4_address|$qr_ip6_address)\b/io;
 my $qr_port_pattern = qr/(\d|\w|-)+/io;
@@ -212,7 +208,6 @@ handle_cmd_args();
 # read config files
 $conf_file = coalesce($conf_file, '/etc/husk/husk.conf');
 read_config_file(fname=>$conf_file);
-load_addrgroups(fname=>sprintf('%s/addr_groups.conf', $conf_dir));
 load_interfaces(fname=>sprintf('%s/interfaces.conf', $conf_dir));
 
 # sanity check
@@ -1173,10 +1168,6 @@ sub compile_call {
     {$criteria{src} = lc($1)};
   if ( $rule =~ s/$qr_kw_dst_addr//s )
     {$criteria{dst} = lc($2)};
-  if ( $rule =~ s/$qr_kw_src_host//s )
-    {$criteria{sgroup} = $1};
-  if ( $rule =~ s/$qr_kw_dst_host//s )
-    {$criteria{dgroup} = $2};
   if ( $rule =~ s/$qr_kw_src_range//s ) {
     my ($from, $to) = ($1, $2);
     $criteria{srcrange} = "$from-$to"};
@@ -1254,24 +1245,6 @@ sub compile_call {
   # make sure we've understood everything on the line, otherwise BARF!
   unknown_keyword(rule=>$rule, complete_rule=>$complete_rule)
     if ( trim($rule) );
-
-  if ( $criteria{sgroup} or $criteria{dgroup} ) {
-    # recurse ourself for each 'source group' or 'destination group'
-    my $addrgrp;
-    $addrgrp = $criteria{sgroup} if $criteria{sgroup};
-    $addrgrp = $criteria{dgroup} if $criteria{dgroup};
-    bomb(sprintf('Unknown address group: %s', $addrgrp))
-      unless $addr_group{$addrgrp};
-
-    my @ag_addresses = @{$addr_group{$addrgrp}{hosts}};
-    foreach  ( @ag_addresses ) {
-      my $addr = $_;
-      my $recurse_rule = $complete_rule;
-      $recurse_rule =~ s/\bgroup $addrgrp\b/address $addr/gi;
-      compile_call(chain=>$chain, line=>$recurse_rule);
-    }
-    return 1;
-  }
 
   # make a decision if the rule is IPv4, IPv6 or Both
   my $rule_is_ipv4 = 0;
@@ -1735,22 +1708,6 @@ sub read_config_file {
     my ($section, $key) = split(/\./, $conf_key);
     bomb('Unknown setting in config file: '.$key)
       unless ( defined($conf_defaults{$key}) );
-  }
-
-  return 1;
-}
-
-sub load_addrgroups {
-  # Access the array of hosts by:
-  #   foreach ( @{$addr_group{rfc1918}{hosts}} ) {
-  my %args = @_;
-  my $fname = $args{fname};
-
-  # Validate what was passed
-  bomb((caller(0))[3] . ' called without passing $fname') unless $fname;
-
-  if ( -f $fname) {
-    tie %addr_group, 'Config::IniFiles', ( -file => $fname );
   }
 
   return 1;

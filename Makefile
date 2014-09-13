@@ -3,7 +3,7 @@ PROJECT=husk
 
 ### Dependencies
 DEP_BINS=perl iptables iptables-save iptables-restore mktemp cat grep bash
-DEP_PMODS=File::Basename Config::Simple Config::IniFiles Getopt::Long
+DEP_PMODS=File::Basename Config::Simple Getopt::Long
 
 ### Destination Paths
 D_BIN=/usr/local/sbin
@@ -13,7 +13,7 @@ D_CNF=/etc/$(PROJECT)
 D_HELPERS=$(D_CNF)/helpers
 
 ### Lists of files to be installed
-F_CONF=husk.conf interfaces.conf addr_groups.conf
+F_CONF=husk.conf interfaces.conf
 F_HELPERS=icmp.conf icmpv6.conf samba.conf apple-ios.conf avg.conf dhcp.conf \
 		  dhcpv6.conf mail.conf dns.conf snmp.conf sql.conf gotomeeting.conf \
 		  pptp.conf nfs.conf
@@ -83,8 +83,8 @@ test:
 	for pmod in $(DEP_PMODS) ; do \
 		perl -M$$pmod -e 1 || { \
 			echo '===> Missing Perl Modules detected; Perhaps you need:' ; \
-			echo 'RedHat: yum install perl-Config-Simple perl-Config-IniFiles' ; \
-			echo 'Debian: apt-get install libconfig-inifiles-perl libconfig-simple-perl' ; \
+			echo 'RedHat: yum install perl-Config-Simple' ; \
+			echo 'Debian: apt-get install libconfig-simple-perl' ; \
 			exit 1; \
 			} ; \
 	done
