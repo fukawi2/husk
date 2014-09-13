@@ -104,12 +104,14 @@ docs: $(F_DOCS) $(F_MAN)
 	pod2man --name=fwfire man/fwfire.pod man/fwfire.1.man
 	pod2man --name=fwlog2rule man/fwlog2rule.pod man/fwlog2rule.1.man
 	pod2man --name=husk.conf man/husk.conf.pod man/husk.conf.5.man
+	pod2man --name=husk-rules.conf man/husk-rules.conf.pod man/husk-rules.conf.5.man
 
 	# build html pages
 	pod2html --infile=man/husk.pod > man/husk.html
 	pod2html --infile=man/fwfire.pod > man/fwfire.html
 	pod2html --infile=man/fwlog2rule.pod > man/fwlog2rule.html
 	pod2html --infile=man/husk.conf.pod > man/husk.conf.html
+	pod2html --infile=man/husk-rules.conf.pod > man/husk-rules.conf.html
 	rm -f pod2htm*.tmp
 
 config: $(F_CONF)

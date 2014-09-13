@@ -1,0 +1,562 @@
+=head1 NAME
+
+rules.conf - firewall rules for husk iptables wrapper
+
+=head1 SYNOPSIS
+
+rules.conf
+
+=head1 DESCRIPTION
+
+The rules.conf file holds all firewall rules in husk syntax. It is what husk
+will compile into regular iptables-restore syntax.
+
+=head1 FILE FORMAT
+
+Traffic passing between zones is known as cross-zone traffic - eg LAN to NET.
+These rules are defined in rule paragraphs.
+
+=head2 DEFINE BLOCKS
+
+=head3 define rules ZONE to ZONE
+
+Defining rules for this cross-zone traffic is done in a 'define rules' block.
+
+There is a special in-built interface called 'ANY' which as the name suggests,
+allows you to write a match calls that ignores one (or both) of the IN and OUT
+zones. For example:
+
+iAllow the whole world to access Secure POP3 on our mail server:
+
+    define rules ANY to DMZ
+    accept protocol tcp port pop3s destination address mail.example.com
+    end define
+
+This is effectively the same as the FORWARD table, but only NEW connections are
+passed through here:
+
+    define rules ANY to ANY
+    accept protocol tcp port 873  # rsync anywhere is fine
+    end define
+
+NOTE: The 'ANY' zone excludes the other interface to avoid bounce routing
+issues. So a match calls for 'ANY to LAN' doesn't include traffic 'LAN to LAN'.
+If you need to allow bounce routing, then add a rule such as this:
+
+    define rules FORWARD
+    accept incoming LAN outgoing LAN
+    accept incoming DMZ outgoing DMZ
+    end define
+
+=head4 Syntax
+
+    define rules INBOUND-ZONE to OUTBOUND-ZONE
+    rules go here
+    end define
+
+=head4 Example
+
+    define rules LAN to NET
+    rules go here
+    end define
+
+=head3 define rules UDC
+
+You can create your own user-defined chains (UDC) using a 'define rules' block.
+These user-defined chains can then be called from cross-zone blocks.
+
+    define rules EMAIL_PORTS
+    accept ip both protocol tcp port 25
+    accept ip both protocol tcp port 110
+    accept ip both protocol tcp port 143
+    end define
+
+=head3 define rules (INPUT|OUTPUT|FORWARD)
+
+To add rules to the standard iptables filter table chains (INPUT, FORWARD and
+OUTPUT), write a 'define rules' UDC block for the appropriate chain:
+
+    define rules INPUT
+    rules go here
+    end define
+
+=head2 RULE SYNTAX
+
+Rules are made up of 2 mandatory parts, and optional comments:
+
+    <target> <criteria> # Comment about this rule
+
+Target is the action to take when Criteria is matched. Target can be either a
+built-in such as ACCEPT, REJECT or DROP, or a User-Deifned Chain (UDC).
+
+=over 4
+
+=item All criteria keywords can be combined to make rules more specific.
+
+=item Order of keywords is NOT important.
+
+=item All keywords in a single rule (line) are subject to AND logic.
+
+=back
+
+It is generally invalid to include the same keyword twice such as:
+
+    accept source address 192.168.1.1 source address 192.168.1.2
+
+This is invalid since a single packet can never have 2 different source
+addresses!
+
+Example rules are below. For full details of available Keywords, see the
+Keywords Dictionary section. All keywords can be mixed and matched to suit the
+rule(s) you require.
+
+    # Accept anything from IPv4 source address 192.168.100.100
+    accept source address 192.168.100.100
+
+    # Accept anything from IPv6 source address 2001:db8::1
+    accept ip 6 source address 2001:db9::1
+
+    # Allow TCP port 80 to whatever 'google.com.au' resolves to via DNS.
+    # (IPv4 only)
+    accept proto tcp port http destination address google.com.au
+
+    # Allow TCP port 80 to whatever 'google.com.au' resolves to via DNS.
+    ( Both IPv4 and IPv6)
+    acceptip both proto tcp port http destination address google.com.au
+
+    # Allow any TCP port 80 and 443 traffic from addresses .1 to .10
+    accept proto tcp ports http,https source range 192.168.0.1 to 192.168.0.10
+
+    # Anything from the given MAC Address is allowed.
+    accept mac 00:14:22:d8:f9:55
+
+    # Reject with ICMP unreachable packet any traffic from the given IP network
+    reject source address 169.254.53.0/24
+
+    # Jump to the user-defined chain "SMB_PORTS" for traffic to 192.168.1.100
+    SMB_PORTS destination address 192.168.1.100
+
+    # Accept everything. Note that the 'all' keyword is optional and has
+    # no meaning. It is allowed purely for the sake of readability.
+    accept all
+
+    # Just drop all packets. Note the 'all' keyword is missing here, but
+    # it matches every packet the same as above.
+    drop
+
+    # Allow 4 ICMP 'echo-request' packets per second, bursting to 8pps
+    accept proto icmp type echo-request limit 4/sec burst 8
+
+    # Allow 4 ICMP 'echo-reply' packets per second, bursting to 12pps
+    accept proto icmp type echo-reply limit 4/sec burst 12
+
+    # Accept any icmp packets that come in the LAN interface.
+    accept in LAN protocol icmp
+
+=head3 Other Rules
+
+These rules can be defined anywhere in the rules file, including outside of a
+'define' paragraph.
+
+=head4 Port Forwarding (DNAT)
+
+If you need to forward incoming traffic from one interface to another using the
+NAT feature of the kernel, you can use the 'map' rule.
+
+For example, to NAT port 80 traffic coming in the "NET" interface to an internal
+server:
+
+    map in NET protocol tcp port 80 74.132.12.56 to 172.16.1.1
+
+You can also translate the ports from one to another by appending to the
+destination port:
+
+    map in NET destination address 74.132.12.56:80 to 172.16.1.1:8080
+
+Don't forget that this only does the Destination NAT. You must also write a
+corresponding rule to allow the traffic through the filtering part of the
+firewall. For example, the corresponding for the above port 80 NAT to the
+internal web server could look like this to allow the whole world access:
+
+    define rules NET to DMZ
+    accept proto tcp port http destination address 172.16.1.1
+    end define
+
+=head4 Intercepting / Redirection
+
+Using the 'trap' or 'redirect' target, you can silently redirect traffic to the
+local computer. This is useful for example to intercept all outgoing SMTP
+traffic to force it through the local SMTP gateway:
+
+    trap in LAN protocol tcp port 25
+
+Redirecting to alternative ports is also possible:
+
+    redirect incoming NET protocol tcp port 80 to 8080
+    redirect incoming NET protocol tcp port 2222 to 22
+
+You must also define corresponding filter rules to allow this traffic the same
+as 'map' rules.
+
+=head4 Raw iptables
+
+Directly writing iptables rules is also supported for putting your own rules in
+using iptables syntax. This allows you to write complex rules or use modules
+that husk doesn't support. For example, to use the NOTRACK target in the 'raw'
+table:
+
+    iptables -t raw -A OUTPUT -d 10.0.0.0/8 -j NOTRACK
+
+In order to use this feature to include rules within chains that husk
+generates, you can use the special value %CHAIN% which will be replaced at
+compile-time with the current chain. For example, you can include a rule within
+the 'NET to ME' chain without having to worry about what the name of the chain
+that husk generates is:
+
+    define NET to ME
+    iptables -A %CHAIN% -p tcp --dport http -j ACCEPT
+    end define
+
+In this example, %CHAIN% will be automatically replaced with 'x_NET_ME' at
+compile time.
+
+=head4 File Includes
+
+If your ruleset is complicated, you can spread the rules over multiple files
+then consoldate them all together at compile time by using the 'include'
+keyword:
+
+    include outbound.rules
+    include inbound.rules
+
+Includes can be either relative paths (to the conf dir) or absolute paths. You
+should be able to nest indefintiely, but be careful not to create loops such
+as:
+
+    [rule-one.conf]
+    include rules-two.conf
+
+    [rules-two.conf]
+    include rules-one.conf
+
+There is NO PROTECTION against this, and may have some 'interesting' results.
+
+=head2 KEYWORD DICTIONARY
+
+=head3 C<protocol>
+
+Synopsis: Specify the protocol to match.
+
+Alternatives: proto
+
+Corollary in iptables: -p
+
+Examples:
+
+    protocol tcp
+    proto udp
+
+=head3 C<incoming>
+
+Synopsis: Specify the inbound zone traffic comes in to match this rule.
+
+Alternatives: in
+
+Corollary in iptables: -i
+
+Examples:
+    incoming NET
+    in LAN
+
+=head3 C<outgoing>
+
+Synopsis: Specify the outbound zone traffic goes out to match this rule.
+
+Alternatives: out
+
+Corollary in iptables: -o
+
+Examples:
+
+    outgoing NET
+    out LAN
+
+=head3 C<source address>
+
+Synopsis: The source address, or network, that traffic must match. You can use
+the following types of values to specify the address:
+
+=over 4
+
+=item IPv4 or IPv4 Address (eg, 192.168.1.1 or 2001:db8::1)
+
+=item IPv4 Address with netmask (eg, 192.168.1.0/255.255.255.0)
+
+=item IPv4 or IPv6 Address with CIDR (eg, 192.168.1.0/24 or 2001:db8::1/64)
+
+=item DNS Hostname
+
+=back
+
+The DNS hostname is resolved by iptables at the time the rules are put in
+place. If the IP Address that the Hostname maps to changes, the rules must be
+reloaded to 'see' the new address.
+
+In older versions of iptables, only the FIRST address returned by the DNS
+lookup is included in the rule, so for DNS records with multiple A records
+(such as Google), using the hostname is not very useful. Upgrade to a newer OS.
+
+Tip: netmasks can be very flexible as it allows you to wildcard any part of the
+address. For example, if you have a company with multiple sites, and each site
+has it's own /16 address space (eg, 10.10.0.0/16, 10.20.0.0/16 etc), and each
+site has a proxy at 10.x.0.1, then you can allow all the proxy servers outbound
+access by using the netmask 255.0.255.255.
+
+Alternatives: None
+
+Corollary in iptables: -s
+
+Examples:
+
+    source address 192.168.1.1
+    source address 192.168.1.0/24
+    source address 10.0.0.1/255.0.255.255
+    source address mail.example.com
+
+=head3 C<destination address>
+
+Synopsis: The opposite of "source address". The same rules apply as above.
+
+Alternatives: dest address
+
+Corollary in iptables: -d
+
+Examples:
+
+    destination address 192.168.1.1
+    destination address 192.168.1.0/24
+    dest address 10.0.0.1/255.0.255.255
+    dest address mail.example.com
+
+=head3 C<source range>
+
+Synopsis: Specify a range of addresses to match as the source address. This
+allows arbitrary ranges to be matched, where the range doesn't fit in a netmask
+or CIDR mask (eg, 192.168.1.1 to 192.168.1.10)
+
+Alternatives: None
+
+Corollary in iptables: -m iprange --src-range
+
+Examples:
+
+    source range 192.168.1.1 to 192.168.1.10
+
+=head3 C<destination range>
+
+Synopsis: Opposite of "source range"
+
+Alternatives: dest range
+
+Corollary in iptables: -m iprange --dst-range
+
+Examples:
+
+    destination range 192.168.100.10 to 192.168.100.50
+
+=head3 C<source port>
+
+Synopsis: The source port of traffic to match this rule. The port can be either
+a number (0 to 65535) or a name as found in /etc/services. This match criteria
+is rarely useful; much less so than "destination port". Change "port" to
+"ports" for multiport match in single rule.
+
+Alternatives: None
+
+Corollary in iptables: --sport
+
+Examples:
+source port 68
+source port http
+source ports 8080,3128
+
+=head3 C<destination port>
+
+Synopsis: Opposite of "source port". The leading "destination" (or "dest") can
+be dropped; when "port" is seen on it's own at compile time, it is assumed to
+be a destination port.
+
+Alternatives: dest port; port
+
+Corollary in iptables: --dport
+
+Examples:
+
+    destination port 80
+    destination port http
+    destination ports http.https
+    ports http.https
+
+=head3 C<limit>
+
+Synopsis: Sets a time-based limit on how often this rule is allowed to be
+matched. Format for the limit is "count/interval". Example values include 3/sec
+or 60/min. Interval can be 'second', 'minute', 'hour' or 'day'.
+
+Alternatives: None
+
+Corollary in iptables: -m limit --limit
+
+Examples:
+
+    limit 3/sec
+    limit 4/minute
+
+=head3 C<type>
+
+Synopsis: Matches the ICMP message type. It is invalid to specify this keyword
+without specifying the protocol as 'icmp'. Either the code (number) or name can
+be supplied (eg, "echo-request" or "8" are valid and equivalent). Check
+C<iptables -p icmp -h> for a list of valid names accepted by your kernel.
+
+Alternatives: None
+
+Corollary in iptables: -m icmp --icmp-type=
+
+Examples:
+
+    type echo-request
+    type 8
+
+=head3 C<start>
+
+Synopsis: Specify that this rule only applied at specific times. This sets the
+"start" time in 24 hour format.
+
+Alternatives: None
+
+Corollary in iptables: -m time --timestart
+
+Examples:
+
+    start 8:00
+
+=head3 C<finish>
+
+Synopsis: Specify that this rule only applied at specific times. This sets the
+"end" time in 24 hour format.
+
+Alternatives: None
+
+Corollary in iptables: -m time --timestop
+
+Examples:
+
+    end 17:00
+
+=head3 C<days>
+
+Synopsis: Specify that this rule only applied at specific times. This sets that
+the rule should only apply on the given day or days. Separate multiple days
+with a comma.
+
+Alternatives: None
+
+Corollary in iptables: -m time --weekdays
+
+Examples:
+
+    days Mon
+    days Mon,Tue,Wed,Thu,Fri
+
+=head3 C<every>
+
+Synopsis: Only match this rule on every X packets. For example, you could
+ACCEPT only every 4th packet. This would simulate 75% packet loss.
+
+Alternatives: None
+
+Corollary in iptables: -m statistic --mode nth --every
+
+Examples:
+
+    every 4
+
+=head3 C<offset>
+
+Synopsis: Works with the "every" keyword to set the starting offset to start
+matching. By default "every" starts counting on the first packet (numbered 0),
+so in the example above, it would match packets 0, 4, 8 etc. If we set the
+offset to "1" then it will then match packets 1, 5, 9 etc. This is useful in
+some special load-balance configurations.
+
+Alternatives: None
+
+Corollary in iptables: -m statistic --mode nth --offset
+
+Examples:
+
+    offset 1
+
+=head3 C<state>
+
+Synopsis: Consult the kernel's connection tracking table to determine what
+"state" the connection that this packet belongs to is in. Valid states are:
+NEW, ESTABLISHED, RELATED, INVALID and UNTRACKED.
+
+Alternatives: None
+
+Corollary in iptables: -m state --state
+
+Examples:
+
+    state new
+    state invalid
+
+=head3 C<mac>
+
+Synopsis: Match this rule if the MAC Address of the source matches. The MAC
+Address must be in the format of XX:XX:XX:XX:XX:XX. This only makes sense for
+packets coming from an ethernet device on the same Layer 2 network.
+
+Alternatives: None
+
+Corollary in iptables: -m mac --mac-source
+
+Examples:
+
+    mac 6c:f0:49:e8:64:28
+
+=head3 C<all>
+
+Synopsis: This is a "noop" (aka "No Operation") keyword. It does NOTHING and is
+ignored. It is for making rules more readable, for example when we need a rule
+that matches all traffic and accept it, we can write "accept all" or "accept".
+
+Alternatives: None
+
+Corollary in iptables: N/A
+
+Examples:
+
+    N/A
+
+=head1 FILES
+
+F</etc/husk/rules.conf> or F<rules.conf>
+
+=head1 VERSION
+
+This man page was valid as at version %VERSION%
+
+=head1 KNOWN BUGS
+
+None.
+
+=head1 AUTHOR
+
+Phillip Smith aka fukawi2
+
+Support and development are available at http://huskfw.info
+
+=cut
