@@ -40,10 +40,12 @@ install: test bin docs config
 	install -Dm0644 man/husk.1.man $(DESTDIR)$(D_MAN)/man1/husk.1p
 	install -Dm0644 man/fwfire.1.man $(DESTDIR)$(D_MAN)/man1/fwfire.1p
 	install -Dm0644 man/husk.conf.5.man $(DESTDIR)$(D_MAN)/man5/husk.conf.5p
+	install -Dm0644 man/husk-rules.conf.5.man $(DESTDIR)$(D_MAN)/man5/husk-rules.conf.5p
 	# ...html docs
 	install -Dm0644 man/husk.html $(DESTDIR)$(D_DOC)/husk.html
 	install -Dm0644 man/fwfire.html $(DESTDIR)$(D_DOC)/fwfire.html
 	install -Dm0644 man/husk.conf.html $(DESTDIR)$(D_DOC)/husk.conf.html
+	install -Dm0644 man/husk-rules.conf.html $(DESTDIR)$(D_DOC)/husk-rules.conf.html
 	# ... hook directories
 	install -d -m0755 $(DESTDIR)$(D_CNF)/pre.d
 	install -d -m0755 $(DESTDIR)$(D_CNF)/post.d
