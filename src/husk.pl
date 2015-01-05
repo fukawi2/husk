@@ -1728,6 +1728,17 @@ sub load_interfaces {
   # Validate what was passed
   bomb((caller(0))[3] . ' called without passing fname') unless $fname;
 
+  # Find the interfaces that actually exist in the kernel
+  my @system_eth_devices;
+  opendir (DIR, '/sys/class/net') or die $!;
+  while (my $possible_interface = readdir(DIR)) {
+    # there are sometimes files that aren't interfaces in /sys/class/net so we
+    # only want to look at symbolic links
+    next unless (-l "/sys/class/net/$possible_interface");
+    push(@system_eth_devices, $possible_interface);
+  }
+  closedir(DIR);
+
   my @file_lines;
   open my $fh, q{<}, $fname or bomb("Failed to read $fname");
   @file_lines = <$fh>;
@@ -1754,6 +1765,11 @@ sub load_interfaces {
       bomb(sprintf('Bad config in "%s": %s', $fname, $line))
     }
 
+    # does this interface actually exist?
+    unless ( grep { m/$int/i } @system_eth_devices ) {
+      emit_warn("Zone '$name' ($int) is not known by the kernel!");
+    }
+
     # make sure it's not already defined
     bomb(sprintf('Zone "%s" defined twice in "%s"', $name, $short_fname))
       if ( $interface{$name} );
@@ -1764,6 +1780,18 @@ sub load_interfaces {
 
     # add to the hash
     $interface{$name} = $int;
+  }
+
+  # are all known interfaces defined?
+  {
+    my %seen=();
+    my $iface;
+    foreach $iface (values %interface) { $seen{$iface} = 1 }
+    foreach $iface (@system_eth_devices) {
+      unless ($seen{$iface}) {
+        emit_warn("Interface $iface exists but not named in $fname");
+      }
+    }
   }
 
   # Make sure we have a ME = lo definition
