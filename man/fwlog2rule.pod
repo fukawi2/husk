@@ -61,7 +61,7 @@ selinux I<audit2allow> command was talked about.
 
 =head1 LICENSE
 
-Copyright 2013-2014 Phillip Smith
+Copyright 2013-2015 Phillip Smith
 
 Made available under the conditions of the GPLv2. This is free software; refer
 to the F<LICENSE> file for details.

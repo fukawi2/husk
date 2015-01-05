@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright (C) 2010-2014 Phillip Smith
+# Copyright (C) 2010-2015 Phillip Smith
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -908,7 +908,7 @@ sub close_rules {
 sub print_header {
   print "#\n";
   printf("# husk version %s\n", $VERSION);
-  print "# Copyright (C) 2010-2014 Phillip Smith\n";
+  print "# Copyright (C) 2010-2015 Phillip Smith\n";
   print "# This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are\n";
   print "# welcome to use and redistribute it under the conditions of the GPL license version 2\n";
   print "# See the \"COPYING\" file for further details.\n";

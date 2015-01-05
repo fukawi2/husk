@@ -277,7 +277,7 @@ Matthew Cengia for pushing me to get atomic loading of rules working.
 
 =head1 LICENSE
 
-Copyright 2010-2014 Phillip Smith
+Copyright 2010-2015 Phillip Smith
 
 Made available under the conditions of the GPLv2. This is free software; refer
 to the F<LICENSE> file for details.
