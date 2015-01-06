@@ -23,7 +23,7 @@ function compile_rules {
   local _command="$1"
   local _temp_file="$2"
 
-  if $_command &> "$_temp_file" ; then
+  if $_command > "$_temp_file" ; then
     # success, return
     return 0
   fi
