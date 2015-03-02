@@ -1836,6 +1836,7 @@ sub init {
   foreach my $chain (qw(INPUT FORWARD OUTPUT)) {
     ipt(sprintf('-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT', $chain));
     ipt(sprintf('-A %s -m conntrack --ctstate RELATED -j ACCEPT',   $chain));
+    ipt(sprintf('-A %s -m conntrack --ctstate INVALID -j DROP', $chain));
   }
 
   return 1;
