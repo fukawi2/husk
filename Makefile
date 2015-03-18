@@ -13,7 +13,7 @@ D_CNF=/etc/$(PROJECT)
 D_HELPERS=$(D_CNF)/helpers
 
 ### Lists of files to be installed
-F_CONF=husk.conf interfaces.conf
+F_CNF=husk.conf interfaces.conf
 F_HELPERS=icmp.conf icmpv6.conf samba.conf apple-ios.conf avg.conf dhcp.conf \
 		  dhcpv6.conf mail.conf dns.conf snmp.conf sql.conf gotomeeting.conf \
 		  pptp.conf nfs.conf
@@ -58,7 +58,7 @@ fallback:
 	mkdir $(fb_dir)
 	cp $(DESTDIR)$(D_BIN)/$(PROJECT) $(fb_dir)/
 	cp $(DESTDIR)$(D_BIN)/fwfire $(fb_dir)/
-	cp $(DESTDIR)$(D_BIN)/fwlog2rule.pl $(fb_dir)/
+	cp $(DESTDIR)$(D_BIN)/fwlog2rule $(fb_dir)/
 	for f in $(F_DOCS) ; do \
 		cp $(DESTDIR)$(D_DOC)/$$f $(fb_dir)/ || exit 1 ; \
 	done
@@ -68,7 +68,7 @@ fallback:
 	cp $(DESTDIR)$(D_MAN)/man1/husk.1p $(fb_dir)/ 2> /dev/null || true
 	cp $(DESTDIR)$(D_MAN)/man1/fwfire.1p $(fb_dir)/ 2> /dev/null || true
 	cp $(DESTDIR)$(D_MAN)/man5/husk.conf.5p $(fb_dir)/ 2> /dev/null || true
-	cp $(DESTDIR)$(D_CONF)/rules.conf $(fb_dir)/ 2> /dev/null || true
+	cp $(DESTDIR)$(D_CNF)/rules.conf $(fb_dir)/ 2> /dev/null || true
 	for f in $(F_CNF) ; do \
 		cp $(DESTDIR)$(D_CNF)/$$f $(fb_dir)/ 2> /dev/null || true ; \
 	done
@@ -116,13 +116,13 @@ docs: $(F_DOCS) $(F_MAN)
 	pod2html --infile=man/husk-rules.conf.pod > man/husk-rules.conf.html
 	rm -f pod2htm*.tmp
 
-config: $(F_CONF)
+config: $(F_CNF)
 	# Install Distribution Helper Rule Files
 	for f in $(F_HELPERS) ; do \
 		install -D -m 0444 helpers/$$f $(DESTDIR)$(D_HELPERS)/$$f || exit 1 ; \
 	done
 	# Install (without overwriting) configuration files
-	for f in $(F_CONF) ; do \
+	for f in $(F_CNF) ; do \
 		[ -e $(DESTDIR)$(D_CNF)/$$f ] || \
 			install -D -m 0644 $$f $(DESTDIR)$(D_CNF)/$$f ; \
 	done
