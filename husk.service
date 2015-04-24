@@ -1,0 +1,13 @@
+[Unit]
+Description=husk firewall
+ConditionFileNotEmpty=/etc/husk/husk.conf
+ConditionFileNotEmpty=/etc/husk/interfaces.conf
+ConditionFileNotEmpty=/etc/husk/rules.conf
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/fwfire -f
+
+[Install]
+WantedBy=basic.target

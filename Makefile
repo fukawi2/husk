@@ -49,6 +49,8 @@ install: test bin docs config
 	# ... hook directories
 	install -d -m0755 $(DESTDIR)$(D_CNF)/pre.d
 	install -d -m0755 $(DESTDIR)$(D_CNF)/post.d
+	# systemd unit
+	install -d -m0644 $(PROJECT).service $(DESTDIR)/usr/local/lib/systemd/system/$(PROJECT).service
 
 clean:
 	rm -f man/*.?.man
